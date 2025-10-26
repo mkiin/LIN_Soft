@@ -1,0 +1,25 @@
+var group__pmctl__api =
+[
+    [ "PMCTL_RESET_SHUTDOWN_IO", "group__pmctl__api.html#ga92ed24c5963832b6fd89fac626602558", null ],
+    [ "PMCTL_RESET_SHUTDOWN_SWD", "group__pmctl__api.html#ga871733815c147731077d9e43ced7a06a", null ],
+    [ "PMCTL_RESET_WATCHDOG", "group__pmctl__api.html#gac897898bac590fde9944b0e00330cf9d", null ],
+    [ "PMCTL_RESET_SYSTEM", "group__pmctl__api.html#ga5f08adc1155d00141ee2c73727cb5f81", null ],
+    [ "PMCTL_RESET_CPU", "group__pmctl__api.html#gabaf60c0d9c10c94f95143a56b58caa66", null ],
+    [ "PMCTL_RESET_LOCKUP", "group__pmctl__api.html#gafde7284cb30993721db3cd96ccee2b33", null ],
+    [ "PMCTL_RESET_ANALOG_FSM_TIMEOUT", "group__pmctl__api.html#ga7ffc65a9039222ba0a2f4bf45e5c991b", null ],
+    [ "PMCTL_RESET_ANALOG_ERROR", "group__pmctl__api.html#ga82c71e99368b2dfb5bc61221b2c7c647", null ],
+    [ "PMCTL_RESET_DIGITAL_ERROR", "group__pmctl__api.html#ga4cc8670d1b2ed3cae2a6a0d9ff2522ab", null ],
+    [ "PMCTL_RESET_SWD", "group__pmctl__api.html#ga945d849c6011d9df5f71ac33ed4ccf1c", null ],
+    [ "PMCTL_RESET_LFXT", "group__pmctl__api.html#ga5b8d38a089b185cc4cda53542a9e0820", null ],
+    [ "PMCTL_RESET_TSD", "group__pmctl__api.html#gaa2a01077bf804a87856724c148207f9a", null ],
+    [ "PMCTL_RESET_VDDR", "group__pmctl__api.html#ga2e395a19b04664464a52f8ccb50b2fcf", null ],
+    [ "PMCTL_RESET_VDDS", "group__pmctl__api.html#ga67fe3085235799d2a09e9a8e18d530b4", null ],
+    [ "PMCTL_RESET_PIN", "group__pmctl__api.html#gac3d2de1c8e7ca90a31e5f9e187736512", null ],
+    [ "PMCTL_RESET_POR", "group__pmctl__api.html#ga41d8f05ccb0460163e3684e2e2db35c1", null ],
+    [ "PMCTL_VOLTAGE_REGULATOR_DCDC", "group__pmctl__api.html#gadc26b858946a71829bc8afa6f8a69e7d", null ],
+    [ "PMCTL_VOLTAGE_REGULATOR_GLDO", "group__pmctl__api.html#gadb764948301a967edb7ae104fbdeefdd", null ],
+    [ "PMCTLGetResetReason", "group__pmctl__api.html#gabe66b44381f4c44b8b6e33c9528d1db5", null ],
+    [ "PMCTLResetSystem", "group__pmctl__api.html#ga5721cfce492629f311a264c300be1406", null ],
+    [ "PMCTLSetVoltageRegulator", "group__pmctl__api.html#ga708c51d7108cad67426f9c684c235ca3", null ],
+    [ "PMCTLGetVoltageRegulator", "group__pmctl__api.html#ga5388150c51a43278c4c2eadb185a95b0", null ]
+];

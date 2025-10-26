@@ -1,0 +1,27 @@
+var hapi_8h =
+[
+    [ "HARD_API_T", "struct_h_a_r_d___a_p_i___t.html", "struct_h_a_r_d___a_p_i___t" ],
+    [ "FLASH_API_KEY", "hapi_8h.html#a9f5a9e01011e05ed8b35a5f2c79a8bcc", null ],
+    [ "HAPI_TABLE_BASE_ADDR", "hapi_8h.html#a5dd5dc133be8488d1a182e3fe18a1686", null ],
+    [ "HAPI_TABLE_POINTER", "hapi_8h.html#a1608a28b8c18730a63e2768f95d2edff", null ],
+    [ "HapiEnterStandby", "hapi_8h.html#afed584a8c92877ded085f92734b3d34e", null ],
+    [ "HapiCrc32", "hapi_8h.html#a053d6dd18b686f610e9df9373aa87aae", null ],
+    [ "HapiApplyCopyList", "hapi_8h.html#a3d3a41fa1acdf0a945e86adb33dfe82c", null ],
+    [ "HapiFlashSectorErase", "hapi_8h.html#a818f0946575f83db6cfee59f83b183f5", null ],
+    [ "HapiFlashBankErase", "hapi_8h.html#a0fcd6c4732c2907e44d50459d581bf7d", null ],
+    [ "HapiFlashProgram", "hapi_8h.html#a82842e76ea1669e695b3e212d333d61e", null ],
+    [ "HapiCountBits", "hapi_8h.html#a7e524e2801fe9fbb1dc74aeeec4db185", null ],
+    [ "HapiSecdedEncode", "hapi_8h.html#ae96f77068bbdfaa7e17e40c8b18361f1", null ],
+    [ "HapiSecdedDecode", "hapi_8h.html#a77c8c257f76942fa22c26f9c3d21e162", null ],
+    [ "HapiEnterApplication", "hapi_8h.html#a79a925973ff5b84123eb1e8c3dbe9c26", null ],
+    [ "HapiSha256SwHashData", "hapi_8h.html#ab013ac735d3f12ec1a2cbbaf47466a35", null ],
+    [ "HapiSha256SwStart", "hapi_8h.html#ad61caaa3e2887652d45e2fbff2526096", null ],
+    [ "HapiSha256SwAddData", "hapi_8h.html#ac969e8499defedc13268f9c50c8b8a92", null ],
+    [ "HapiSha256SwFinalize", "hapi_8h.html#ad0f6d0e676323b59f0d2681b6ce6fadf", null ],
+    [ "HapiResetDevice", "hapi_8h.html#a5dc1b69ed8a02d7370f2558bab0ccfb1", null ],
+    [ "HapiSha256SwProcessBlock", "hapi_8h.html#aea7c78ea0b7f7d66fed463c153566565", null ],
+    [ "HapiSha256Sw_K256", "hapi_8h.html#a740a1b8fc45ab73429e177b07b4abf12", null ],
+    [ "HapiSha256Sw_initialDigest256", "hapi_8h.html#a0d5f8144c00ebe0e6c0b2bba2f5c986c", null ],
+    [ "HapiWaitUs", "hapi_8h.html#a7c0c2ea3ea4b38deb6864ba2f222d107", null ],
+    [ "HapiClz", "hapi_8h.html#a09dc996c8f5490cb7da6fd9db01a06f8", null ]
+];

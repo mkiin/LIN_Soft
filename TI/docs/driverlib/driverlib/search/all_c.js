@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['nvic_20functions',['NVIC Functions',['../group___c_m_s_i_s___core___n_v_i_c_functions.html',1,'']]],
+  ['nested_20vectored_20interrupt_20controller_20_28nvic_29',['Nested Vectored Interrupt Controller (NVIC)',['../group___c_m_s_i_s___n_v_i_c.html',1,'']]],
+  ['n',['N',['../union_a_p_s_r___type.html#a7e7bbba9b00b0bb3283dc07f1abe37e0',1,'APSR_Type::N()'],['../unionx_p_s_r___type.html#a2db9a52f6d42809627d1a7a607c5dbc5',1,'xPSR_Type::N()']]],
+  ['nonmaskableint_5firqn',['NonMaskableInt_IRQn',['../cc23x0r5_8h.html#a666eb0caeb12ec0e281415592ae89083ade177d9c70c89e084093024b932a4e30',1,'cc23x0r5.h']]],
+  ['npriv',['nPRIV',['../union_c_o_n_t_r_o_l___type.html#a35c1732cf153b7b5c4bd321cf1de9605',1,'CONTROL_Type']]],
+  ['nvic',['NVIC',['../group___c_m_s_i_s__core__base.html#gac8e97e8ce56ae9f57da1363a937f8a17',1,'core_cm0plus.h']]],
+  ['nvic_5fbase_5fcmsis',['NVIC_BASE_CMSIS',['../group___c_m_s_i_s__core__base.html#ga6fb56a73d39637b98d95a89a73dce36a',1,'core_cm0plus.h']]],
+  ['nvic_5fclearpendingirq',['NVIC_ClearPendingIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga590cf113000a079b1f0ea3dcd5b5316c',1,'core_cm0plus.h']]],
+  ['nvic_5fdecodepriority',['NVIC_DecodePriority',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga3387607fd8a1a32cccd77d2ac672dd96',1,'core_cm0plus.h']]],
+  ['nvic_5fdisableirq',['NVIC_DisableIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga73b4e251f59cab4e9a5e234aac02ae57',1,'core_cm0plus.h']]],
+  ['nvic_5fenableirq',['NVIC_EnableIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga57b3064413dbc7459d9646020fdd8bef',1,'core_cm0plus.h']]],
+  ['nvic_5fencodepriority',['NVIC_EncodePriority',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#gadb94ac5d892b376e4f3555ae0418ebac',1,'core_cm0plus.h']]],
+  ['nvic_5fgetenableirq',['NVIC_GetEnableIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga857de13232ec65dd15087eaa15bc4a69',1,'core_cm0plus.h']]],
+  ['nvic_5fgetpendingirq',['NVIC_GetPendingIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#gac608957a239466e9e0cbc30aa64feb3b',1,'core_cm0plus.h']]],
+  ['nvic_5fgetpriority',['NVIC_GetPriority',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#gaf59b9d0a791d2157abb319753953eceb',1,'core_cm0plus.h']]],
+  ['nvic_5fgetprioritygrouping',['NVIC_GetPriorityGrouping',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga4eeb9214f2264fc23c34ad5de2d3fa11',1,'core_cm0plus.h']]],
+  ['nvic_5fgetvector',['NVIC_GetVector',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga955eb1c33a3dcc62af11a8385e8c0fc8',1,'core_cm0plus.h']]],
+  ['nvic_5fsetpendingirq',['NVIC_SetPendingIRQ',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga2b47e2e52cf5c48a5c3348636434b3ac',1,'core_cm0plus.h']]],
+  ['nvic_5fsetpriority',['NVIC_SetPriority',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#gae0e9d0e2f7b6133828c71b57d4941c35',1,'core_cm0plus.h']]],
+  ['nvic_5fsetprioritygrouping',['NVIC_SetPriorityGrouping',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga0e798d5aec68cdd8263db86a76df788f',1,'core_cm0plus.h']]],
+  ['nvic_5fsetvector',['NVIC_SetVector',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga804af63bb4c4c317387897431814775d',1,'core_cm0plus.h']]],
+  ['nvic_5fsystemreset',['NVIC_SystemReset',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga6aa0367d3642575610476bf0366f0c48',1,'core_cm0plus.h']]],
+  ['nvic_5ftype',['NVIC_Type',['../struct_n_v_i_c___type.html',1,'']]],
+  ['nvic_5fuser_5firq_5foffset',['NVIC_USER_IRQ_OFFSET',['../group___c_m_s_i_s___core___n_v_i_c_functions.html#ga8045d905a5ca57437d8e6f71ffcb6df5',1,'core_cm0plus.h']]]
+];
