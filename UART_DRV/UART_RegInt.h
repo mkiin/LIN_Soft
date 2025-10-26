@@ -1,182 +1,182 @@
-/**
- * @file        UART_RegInt.h
+/*
+ * Copyright (c) 2025, Custom Implementation
+ * Based on Texas Instruments UART2 driver structure
+ * All rights reserved.
  *
- * @brief       UART Register Interrupt Driver - Public API
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * @details     レジスタ割り込みベースのUARTドライバ公開API
- *              DMA機能を使用せず、レジスタ直接アクセスと割り込み処理で
- *              UART通信を実現します。
+ * *  Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
  *
- * @note        TI UART2ドライバとAPI互換性を持たせた設計
+ * *  Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * @par Usage Example
- * @code
- * UART_RegInt_Handle handle;
- * UART_RegInt_Params params;
- * 
- * UART_RegInt_init();
- * UART_RegInt_Params_init(&params);
- * params.baudRate = 9600;
- * params.readMode = UART_REGINT_MODE_CALLBACK;
- * params.readCallback = myReadCallback;
- * 
- * handle = UART_RegInt_open(0, &params);
- * if (handle == NULL) {
- *     // Error handling
- * }
- * 
- * UART_RegInt_read(handle, rxBuffer, sizeof(rxBuffer));
- * UART_RegInt_write(handle, txBuffer, sizeof(txBuffer));
- * @endcode
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UART_REGINT_H
-#define UART_REGINT_H
+/*!****************************************************************************
+ *  @file       UART_RegInt.h
+ *
+ *  @brief      Register Interrupt based UART driver (DMA-free)
+ *
+ *  @anchor ti_drivers_UART_RegInt_Overview
+ *  # Overview
+ *
+ *  The UART_RegInt driver provides interrupt-driven UART communication without
+ *  using DMA. It is API-compatible with TI's UART2 driver for easy migration.
+ *
+ *  This driver is optimized for LIN communication on CC2340R53, supporting
+ *  low to moderate baudrates (2400-19200 bps) with efficient FIFO usage.
+ *
+ *  @anchor ti_drivers_UART_RegInt_Usage
+ *  # Usage
+ *
+ *  ## Initialization #
+ *  @code
+ *  UART_RegInt_init();
+ *
+ *  UART_RegInt_Params params;
+ *  UART_RegInt_Params_init(&params);
+ *  params.baudRate = 9600;
+ *  params.readMode = UART_REGINT_MODE_CALLBACK;
+ *  params.readCallback = myReadCallback;
+ *
+ *  UART_RegInt_Handle handle = UART_RegInt_open(0, &params);
+ *  if (handle == NULL) {
+ *      // Error handling
+ *  }
+ *  @endcode
+ *
+ *  ## Transmit Data #
+ *  @code
+ *  uint8_t txBuf[8] = {0x55, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+ *  int_fast16_t result = UART_RegInt_write(handle, txBuf, 8);
+ *  @endcode
+ *
+ *  ## Receive Data #
+ *  @code
+ *  uint8_t rxBuf[8];
+ *  int_fast16_t result = UART_RegInt_read(handle, rxBuf, 8);
+ *  @endcode
+ *
+ ******************************************************************************
+ */
+
+#ifndef ti_drivers_UART_RegInt__include
+#define ti_drivers_UART_RegInt__include
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*==========================================================================*/
-/* Includes                                                                 */
-/*==========================================================================*/
-
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-
-/*==========================================================================*/
-/* Type Definitions                                                        */
-/*==========================================================================*/
-
-/**
- * @brief UART_RegInt Handle
- * 
- * UARTドライバインスタンスへの不透明ポインタ
+/*!
+ *  @brief      A handle that is returned from a UART_RegInt_open() call
  */
-typedef struct UART_RegInt_Object_ *UART_RegInt_Handle;
+typedef struct UART_RegInt_Config_ *UART_RegInt_Handle;
 
-/*==========================================================================*/
-/* Status Codes                                                            */
-/*==========================================================================*/
+/* Flow control modes */
+#define UART_REGINT_FLOWCTRL_NONE     (0)  /*!< No flow control */
+#define UART_REGINT_FLOWCTRL_HARDWARE (1)  /*!< Hardware flow control (CTS/RTS) */
 
-/**
- * @brief Status Codes
- * 
- * API関数の戻り値として使用されるステータスコード
- */
-#define UART_REGINT_STATUS_SUCCESS      (0)     /**< 成功 */
-#define UART_REGINT_STATUS_ERROR        (-1)    /**< 一般エラー */
-#define UART_REGINT_STATUS_EINUSE       (-2)    /**< リソース使用中 */
-#define UART_REGINT_STATUS_ETIMEOUT     (-3)    /**< タイムアウト */
-#define UART_REGINT_STATUS_ECANCELLED   (-4)    /**< キャンセル */
-#define UART_REGINT_STATUS_EFRAMING     (-5)    /**< フレーミングエラー */
-#define UART_REGINT_STATUS_EPARITY      (-6)    /**< パリティエラー */
-#define UART_REGINT_STATUS_EBREAK       (-7)    /**< ブレークエラー */
-#define UART_REGINT_STATUS_EOVERRUN     (-8)    /**< オーバーランエラー */
-#define UART_REGINT_STATUS_EINVALID     (-9)    /**< 無効なパラメータ */
+/* Status codes */
+#define UART_REGINT_STATUS_SUCCESS    (0)   /*!< Success */
+#define UART_REGINT_STATUS_ERROR      (-1)  /*!< General error */
+#define UART_REGINT_STATUS_EINUSE     (-2)  /*!< Resource in use */
+#define UART_REGINT_STATUS_ETIMEOUT   (-3)  /*!< Operation timed out */
+#define UART_REGINT_STATUS_ECANCELLED (-4)  /*!< Operation cancelled */
+#define UART_REGINT_STATUS_EFRAMING   (-5)  /*!< Framing error */
+#define UART_REGINT_STATUS_EPARITY    (-6)  /*!< Parity error */
+#define UART_REGINT_STATUS_EBREAK     (-7)  /*!< Break error */
+#define UART_REGINT_STATUS_EOVERRUN   (-8)  /*!< Overrun error */
+#define UART_REGINT_STATUS_EINVALID   (-9)  /*!< Invalid parameters */
+#define UART_REGINT_STATUS_ENOTOPEN   (-10) /*!< UART not opened */
 
-/*==========================================================================*/
-/* Event Flags                                                             */
-/*==========================================================================*/
+/* Event flags */
+#define UART_REGINT_EVENT_OVERRUN     (0x01) /*!< Overrun error occurred */
+#define UART_REGINT_EVENT_BREAK       (0x02) /*!< Break error occurred */
+#define UART_REGINT_EVENT_PARITY      (0x04) /*!< Parity error occurred */
+#define UART_REGINT_EVENT_FRAMING     (0x08) /*!< Framing error occurred */
+#define UART_REGINT_EVENT_TX_BEGIN    (0x10) /*!< Transmission started */
+#define UART_REGINT_EVENT_TX_FINISHED (0x20) /*!< Transmission finished */
 
-/**
- * @brief Event Flags
- * 
- * イベントコールバックで通知されるイベントフラグ
- */
-#define UART_REGINT_EVENT_OVERRUN       (0x01U) /**< オーバーランエラー発生 */
-#define UART_REGINT_EVENT_BREAK         (0x02U) /**< ブレークエラー発生 */
-#define UART_REGINT_EVENT_PARITY        (0x04U) /**< パリティエラー発生 */
-#define UART_REGINT_EVENT_FRAMING       (0x08U) /**< フレーミングエラー発生 */
-#define UART_REGINT_EVENT_TX_BEGIN      (0x10U) /**< 送信開始 */
-#define UART_REGINT_EVENT_TX_FINISHED   (0x20U) /**< 送信完了 */
+/* Wait forever timeout */
+#define UART_REGINT_WAIT_FOREVER      (~(0U))
 
-/*==========================================================================*/
-/* Operating Modes                                                         */
-/*==========================================================================*/
-
-/**
- * @brief UART Operating Mode
- * 
- * UART動作モード
+/*!
+ *  @brief      UART operating modes
  */
 typedef enum
 {
-    UART_REGINT_MODE_BLOCKING = 0,  /**< ブロッキングモード（完了まで待機） */
-    UART_REGINT_MODE_CALLBACK,      /**< コールバックモード（非ブロッキング） */
+    UART_REGINT_MODE_BLOCKING = 0, /*!< Blocking mode - function waits until complete */
+    UART_REGINT_MODE_CALLBACK,     /*!< Callback mode - function returns immediately, callback invoked on completion */
 } UART_RegInt_Mode;
 
-/*==========================================================================*/
-/* Data Configuration                                                      */
-/*==========================================================================*/
-
-/**
- * @brief Data Length
- * 
- * UARTデータ長
+/*!
+ *  @brief      UART read return modes
  */
 typedef enum
 {
-    UART_REGINT_DataLen_5 = 0,      /**< 5ビット */
-    UART_REGINT_DataLen_6,          /**< 6ビット */
-    UART_REGINT_DataLen_7,          /**< 7ビット */
-    UART_REGINT_DataLen_8,          /**< 8ビット (デフォルト) */
-} UART_RegInt_DataLen;
-
-/**
- * @brief Stop Bits
- * 
- * UARTストップビット
- */
-typedef enum
-{
-    UART_REGINT_StopBits_1 = 0,     /**< 1ストップビット (デフォルト) */
-    UART_REGINT_StopBits_2,         /**< 2ストップビット */
-} UART_RegInt_StopBits;
-
-/**
- * @brief Parity Type
- * 
- * UARTパリティ設定
- */
-typedef enum
-{
-    UART_REGINT_Parity_NONE = 0,    /**< パリティなし (デフォルト) */
-    UART_REGINT_Parity_EVEN,        /**< 偶数パリティ */
-    UART_REGINT_Parity_ODD,         /**< 奇数パリティ */
-    UART_REGINT_Parity_ZERO,        /**< 固定0パリティ */
-    UART_REGINT_Parity_ONE,         /**< 固定1パリティ */
-} UART_RegInt_Parity;
-
-/**
- * @brief Read Return Mode
- * 
- * 受信データ返却モード
- */
-typedef enum
-{
-    UART_REGINT_ReadReturnMode_FULL = 0,    /**< 要求バイト数完全受信まで待機 */
-    UART_REGINT_ReadReturnMode_PARTIAL,     /**< 部分受信でも返却 */
+    UART_REGINT_ReadReturnMode_FULL = 0, /*!< Return only when buffer is full */
+    UART_REGINT_ReadReturnMode_PARTIAL,  /*!< Return on timeout even if buffer not full */
 } UART_RegInt_ReadReturnMode;
 
-/*==========================================================================*/
-/* Callback Function Types                                                */
-/*==========================================================================*/
+/*!
+ *  @brief      UART data length
+ */
+typedef enum
+{
+    UART_REGINT_DataLen_5 = 0, /*!< 5 data bits */
+    UART_REGINT_DataLen_6,     /*!< 6 data bits */
+    UART_REGINT_DataLen_7,     /*!< 7 data bits */
+    UART_REGINT_DataLen_8,     /*!< 8 data bits (most common) */
+} UART_RegInt_DataLen;
 
-/**
- * @brief Read/Write Callback Function
- * 
- * 送受信完了時に呼び出されるコールバック関数
+/*!
+ *  @brief      UART stop bits
+ */
+typedef enum
+{
+    UART_REGINT_StopBits_1 = 0, /*!< 1 stop bit */
+    UART_REGINT_StopBits_2,     /*!< 2 stop bits */
+} UART_RegInt_StopBits;
+
+/*!
+ *  @brief      UART parity type
+ */
+typedef enum
+{
+    UART_REGINT_Parity_NONE = 0, /*!< No parity */
+    UART_REGINT_Parity_EVEN,     /*!< Even parity */
+    UART_REGINT_Parity_ODD,      /*!< Odd parity */
+    UART_REGINT_Parity_ZERO,     /*!< Parity bit always 0 */
+    UART_REGINT_Parity_ONE,      /*!< Parity bit always 1 */
+} UART_RegInt_Parity;
+
+/*!
+ *  @brief      Callback function invoked on read/write completion
  *
- * @param[in] handle    UARTハンドル
- * @param[in] buf       送受信バッファへのポインタ
- * @param[in] count     実際に送受信されたバイト数
- * @param[in] userArg   ユーザー引数 (Paramsで設定)
- * @param[in] status    ステータスコード
- *
- * @note コールバックは割り込みコンテキストで実行されます
- *       ブロッキング処理を行わないでください
+ *  @param[in]  handle      UART handle
+ *  @param[in]  buf         Pointer to buffer
+ *  @param[in]  count       Number of bytes transferred
+ *  @param[in]  userArg     User argument
+ *  @param[in]  status      Status code (UART_REGINT_STATUS_SUCCESS or error)
  */
 typedef void (*UART_RegInt_Callback)(UART_RegInt_Handle handle,
                                      void *buf,
@@ -184,255 +184,249 @@ typedef void (*UART_RegInt_Callback)(UART_RegInt_Handle handle,
                                      void *userArg,
                                      int_fast16_t status);
 
-/**
- * @brief Event Callback Function
- * 
- * UARTイベント発生時に呼び出されるコールバック関数
+/*!
+ *  @brief      Callback function invoked on UART events (errors, etc.)
  *
- * @param[in] handle    UARTハンドル
- * @param[in] event     イベントフラグ (UART_REGINT_EVENT_*)
- * @param[in] data      イベント固有データ
- * @param[in] userArg   ユーザー引数 (Paramsで設定)
- *
- * @note コールバックは割り込みコンテキストで実行されます
+ *  @param[in]  handle      UART handle
+ *  @param[in]  event       Event flags (UART_REGINT_EVENT_*)
+ *  @param[in]  data        Event-specific data
+ *  @param[in]  userArg     User argument
  */
 typedef void (*UART_RegInt_EventCallback)(UART_RegInt_Handle handle,
                                           uint32_t event,
                                           uint32_t data,
                                           void *userArg);
 
-/*==========================================================================*/
-/* Parameter Structure                                                     */
-/*==========================================================================*/
-
-/**
- * @brief UART Parameters
- * 
- * UART設定パラメータ構造体
+/*!
+ *  @brief      UART parameters
+ *
+ *  These parameters are used with UART_RegInt_open() to configure the UART
+ *  instance.
  */
 typedef struct
 {
-    UART_RegInt_Mode            readMode;           /**< 受信モード */
-    UART_RegInt_Mode            writeMode;          /**< 送信モード */
-    UART_RegInt_Callback        readCallback;       /**< 受信コールバック */
-    UART_RegInt_Callback        writeCallback;      /**< 送信コールバック */
-    UART_RegInt_EventCallback   eventCallback;      /**< イベントコールバック */
-    uint32_t                    eventMask;          /**< イベントマスク */
-    UART_RegInt_ReadReturnMode  readReturnMode;     /**< 受信返却モード */
-    uint32_t                    baudRate;           /**< ボーレート */
-    UART_RegInt_DataLen         dataLength;         /**< データ長 */
-    UART_RegInt_StopBits        stopBits;           /**< ストップビット */
-    UART_RegInt_Parity          parityType;         /**< パリティ */
-    void                        *userArg;           /**< ユーザー引数 */
+    UART_RegInt_Mode readMode;              /*!< Read operation mode */
+    UART_RegInt_Mode writeMode;             /*!< Write operation mode */
+    UART_RegInt_Callback readCallback;      /*!< Read completion callback */
+    UART_RegInt_Callback writeCallback;     /*!< Write completion callback */
+    UART_RegInt_EventCallback eventCallback; /*!< Event callback for errors */
+    uint32_t eventMask;                     /*!< Event mask (which events to report) */
+    UART_RegInt_ReadReturnMode readReturnMode; /*!< Read return behavior */
+    uint32_t baudRate;                      /*!< Baud rate (e.g., 9600, 19200) */
+    UART_RegInt_DataLen dataLength;         /*!< Data length (bits per character) */
+    UART_RegInt_StopBits stopBits;          /*!< Number of stop bits */
+    UART_RegInt_Parity parityType;          /*!< Parity type */
+    void *userArg;                          /*!< User argument passed to callbacks */
 } UART_RegInt_Params;
 
-/*==========================================================================*/
-/* Configuration Structure                                                 */
-/*==========================================================================*/
-
-/**
- * @brief UART Configuration
- * 
- * UART設定構造体（静的設定用）
+/*!
+ *  @brief      UART configuration structure
+ *
+ *  This structure contains the hardware and software configuration for a
+ *  UART instance. It is typically defined in the board configuration file.
  */
-typedef struct
+typedef struct UART_RegInt_Config_
 {
-    void                        *object;            /**< オブジェクトインスタンス */
-    void const                  *hwAttrs;           /**< ハードウェア属性 */
+    void *object;    /*!< Pointer to UART object (device-specific) */
+    void const *hwAttrs; /*!< Pointer to hardware attributes (device-specific) */
 } UART_RegInt_Config;
 
-/**
- * @brief UART設定テーブルの要素数
- * 
- * アプリケーションで定義される必要があります
+/*!
+ *  @brief      Close a UART instance
+ *
+ *  Closes the UART instance and releases all resources. Any pending transactions
+ *  are cancelled.
+ *
+ *  @param[in]  handle      UART handle returned from UART_RegInt_open()
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-extern const uint_least8_t UART_RegInt_count;
+extern void UART_RegInt_close(UART_RegInt_Handle handle);
 
-/**
- * @brief UART設定テーブル
- * 
- * アプリケーションで定義される必要があります
+/*!
+ *  @brief      Initialize the UART driver module
+ *
+ *  This function must be called once before any other UART_RegInt functions.
+ *  Typically called from the main() function before BIOS_start().
  */
-extern const UART_RegInt_Config UART_RegInt_config[];
+extern void UART_RegInt_init(void);
 
-/*==========================================================================*/
-/* API Functions                                                           */
-/*==========================================================================*/
-
-/**
- * @brief モジュール初期化
- * 
- * UARTドライバモジュールを初期化します。
- * 他のAPI関数を呼び出す前に1回だけ呼び出してください。
+/*!
+ *  @brief      Open a UART instance
  *
- * @note この関数は複数回呼び出しても安全です（冪等）
+ *  Opens a UART instance with the specified parameters.
+ *
+ *  @param[in]  index       Index in the UART_RegInt_config array
+ *  @param[in]  params      Pointer to parameters, or NULL for default
+ *
+ *  @return     UART_RegInt_Handle on success, NULL on error
+ *
+ *  @pre        UART_RegInt_init() has been called
  */
-void UART_RegInt_init(void);
+extern UART_RegInt_Handle UART_RegInt_open(uint_least8_t index,
+                                           UART_RegInt_Params *params);
 
-/**
- * @brief パラメータ初期化
- * 
- * UART_RegInt_Params構造体をデフォルト値で初期化します。
+/*!
+ *  @brief      Initialize UART parameters to default values
  *
- * @param[out] params   初期化するパラメータ構造体
+ *  @param[out] params      Pointer to parameters structure
  *
- * @par デフォルト値
- * - readMode: UART_REGINT_MODE_BLOCKING
- * - writeMode: UART_REGINT_MODE_BLOCKING
- * - readCallback: NULL
- * - writeCallback: NULL
- * - eventCallback: NULL
- * - eventMask: 0
- * - readReturnMode: UART_REGINT_ReadReturnMode_FULL
- * - baudRate: 9600
- * - dataLength: UART_REGINT_DataLen_8
- * - stopBits: UART_REGINT_StopBits_1
- * - parityType: UART_REGINT_Parity_NONE
- * - userArg: NULL
+ *  Default values:
+ *  - readMode: UART_REGINT_MODE_BLOCKING
+ *  - writeMode: UART_REGINT_MODE_BLOCKING
+ *  - readCallback: NULL
+ *  - writeCallback: NULL
+ *  - eventCallback: NULL
+ *  - eventMask: 0
+ *  - readReturnMode: UART_REGINT_ReadReturnMode_FULL
+ *  - baudRate: 9600
+ *  - dataLength: UART_REGINT_DataLen_8
+ *  - stopBits: UART_REGINT_StopBits_1
+ *  - parityType: UART_REGINT_Parity_NONE
+ *  - userArg: NULL
  */
-void UART_RegInt_Params_init(UART_RegInt_Params *params);
+extern void UART_RegInt_Params_init(UART_RegInt_Params *params);
 
-/**
- * @brief UARTオープン
- * 
- * 指定されたインデックスのUARTインスタンスを開きます。
+/*!
+ *  @brief      Read data from UART
  *
- * @param[in] index     UART設定テーブルのインデックス
- * @param[in] params    UARTパラメータ（NULLの場合デフォルト値）
- * @return UARTハンドル（失敗時はNULL）
+ *  Reads data from the UART. Behavior depends on the read mode:
+ *  - BLOCKING: Blocks until the requested bytes are received
+ *  - CALLBACK: Returns immediately, readCallback invoked on completion
  *
- * @note 同じインデックスを複数回開くことはできません
+ *  @param[in]  handle      UART handle
+ *  @param[out] buf         Buffer to store received data
+ *  @param[in]  size        Number of bytes to read
+ *
+ *  @return     BLOCKING mode: Number of bytes read, or negative error code
+ *              CALLBACK mode: UART_REGINT_STATUS_SUCCESS (0) or negative error code
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-UART_RegInt_Handle UART_RegInt_open(uint_least8_t index, 
-                                    UART_RegInt_Params *params);
-
-/**
- * @brief UARTクローズ
- * 
- * UARTインスタンスを閉じ、リソースを解放します。
- *
- * @param[in] handle    UARTハンドル
- *
- * @note 実行中の送受信処理はキャンセルされます
- */
-void UART_RegInt_close(UART_RegInt_Handle handle);
-
-/**
- * @brief データ受信
- * 
- * UARTからデータを受信します。
- * - BLOCKING モード: 受信完了まで待機
- * - CALLBACK モード: 即座に戻り、完了時にコールバック呼び出し
- *
- * @param[in]  handle   UARTハンドル
- * @param[out] buf      受信バッファ
- * @param[in]  size     受信バイト数
- * @return ステータスコード
- *         - BLOCKING: 受信バイト数 or エラーコード
- *         - CALLBACK: UART_REGINT_STATUS_SUCCESS or エラーコード
- */
-int_fast16_t UART_RegInt_read(UART_RegInt_Handle handle,
-                              void *buf,
-                              size_t size);
-
-/**
- * @brief データ受信（タイムアウト指定）
- * 
- * タイムアウト付きでUARTからデータを受信します。
- *
- * @param[in]  handle   UARTハンドル
- * @param[out] buf      受信バッファ
- * @param[in]  size     受信バイト数
- * @param[in]  timeout  タイムアウト（マイクロ秒、UART_REGINT_WAIT_FOREVERで無限待機）
- * @return 受信バイト数 or エラーコード
- */
-int_fast16_t UART_RegInt_readTimeout(UART_RegInt_Handle handle,
+extern int_fast16_t UART_RegInt_read(UART_RegInt_Handle handle,
                                      void *buf,
-                                     size_t size,
-                                     uint32_t timeout);
+                                     size_t size);
 
-/**
- * @brief 受信キャンセル
- * 
- * 実行中の受信処理をキャンセルします。
+/*!
+ *  @brief      Read data from UART with timeout
  *
- * @param[in] handle    UARTハンドル
+ *  Same as UART_RegInt_read() but with timeout support.
+ *
+ *  @param[in]  handle      UART handle
+ *  @param[out] buf         Buffer to store received data
+ *  @param[in]  size        Number of bytes to read
+ *  @param[in]  timeout     Timeout in microseconds, UART_REGINT_WAIT_FOREVER for no timeout
+ *
+ *  @return     Number of bytes read, or negative error code
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-void UART_RegInt_readCancel(UART_RegInt_Handle handle);
+extern int_fast16_t UART_RegInt_readTimeout(UART_RegInt_Handle handle,
+                                            void *buf,
+                                            size_t size,
+                                            uint32_t timeout);
 
-/**
- * @brief データ送信
- * 
- * UARTへデータを送信します。
- * - BLOCKING モード: 送信完了まで待機
- * - CALLBACK モード: 即座に戻り、完了時にコールバック呼び出し
+/*!
+ *  @brief      Cancel ongoing read operation
  *
- * @param[in] handle    UARTハンドル
- * @param[in] buf       送信バッファ
- * @param[in] size      送信バイト数
- * @return ステータスコード
- *         - BLOCKING: 送信バイト数 or エラーコード
- *         - CALLBACK: UART_REGINT_STATUS_SUCCESS or エラーコード
+ *  Cancels the current read operation. The read callback (if set) will be
+ *  invoked with status UART_REGINT_STATUS_ECANCELLED.
+ *
+ *  @param[in]  handle      UART handle
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-int_fast16_t UART_RegInt_write(UART_RegInt_Handle handle,
-                               const void *buf,
-                               size_t size);
+extern void UART_RegInt_readCancel(UART_RegInt_Handle handle);
 
-/**
- * @brief データ送信（タイムアウト指定）
- * 
- * タイムアウト付きでUARTへデータを送信します。
+/*!
+ *  @brief      Write data to UART
  *
- * @param[in] handle    UARTハンドル
- * @param[in] buf       送信バッファ
- * @param[in] size      送信バイト数
- * @param[in] timeout   タイムアウト（マイクロ秒、UART_REGINT_WAIT_FOREVERで無限待機）
- * @return 送信バイト数 or エラーコード
+ *  Writes data to the UART. Behavior depends on the write mode:
+ *  - BLOCKING: Blocks until all data is transmitted
+ *  - CALLBACK: Returns immediately, writeCallback invoked on completion
+ *
+ *  @param[in]  handle      UART handle
+ *  @param[in]  buf         Buffer containing data to transmit
+ *  @param[in]  size        Number of bytes to write
+ *
+ *  @return     BLOCKING mode: Number of bytes written, or negative error code
+ *              CALLBACK mode: UART_REGINT_STATUS_SUCCESS (0) or negative error code
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-int_fast16_t UART_RegInt_writeTimeout(UART_RegInt_Handle handle,
+extern int_fast16_t UART_RegInt_write(UART_RegInt_Handle handle,
                                       const void *buf,
-                                      size_t size,
-                                      uint32_t timeout);
+                                      size_t size);
 
-/**
- * @brief 送信キャンセル
- * 
- * 実行中の送信処理をキャンセルします。
+/*!
+ *  @brief      Write data to UART with timeout
  *
- * @param[in] handle    UARTハンドル
+ *  Same as UART_RegInt_write() but with timeout support.
+ *
+ *  @param[in]  handle      UART handle
+ *  @param[in]  buf         Buffer containing data to transmit
+ *  @param[in]  size        Number of bytes to write
+ *  @param[in]  timeout     Timeout in microseconds, UART_REGINT_WAIT_FOREVER for no timeout
+ *
+ *  @return     Number of bytes written, or negative error code
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-void UART_RegInt_writeCancel(UART_RegInt_Handle handle);
+extern int_fast16_t UART_RegInt_writeTimeout(UART_RegInt_Handle handle,
+                                             const void *buf,
+                                             size_t size,
+                                             uint32_t timeout);
 
-/**
- * @brief 受信有効化
- * 
- * UART受信を有効化します。
+/*!
+ *  @brief      Cancel ongoing write operation
  *
- * @param[in] handle    UARTハンドル
+ *  Cancels the current write operation. The write callback (if set) will be
+ *  invoked with status UART_REGINT_STATUS_ECANCELLED.
+ *
+ *  @param[in]  handle      UART handle
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-void UART_RegInt_rxEnable(UART_RegInt_Handle handle);
+extern void UART_RegInt_writeCancel(UART_RegInt_Handle handle);
 
-/**
- * @brief 受信無効化
- * 
- * UART受信を無効化します。
+/*!
+ *  @brief      Enable UART receive
  *
- * @param[in] handle    UARTハンドル
+ *  Enables the receive function and sets power constraints to prevent standby.
+ *
+ *  @param[in]  handle      UART handle
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-void UART_RegInt_rxDisable(UART_RegInt_Handle handle);
+extern void UART_RegInt_rxEnable(UART_RegInt_Handle handle);
 
-/**
- * @brief オーバーランカウント取得
- * 
- * 発生したオーバーランエラーの累積カウントを取得します。
+/*!
+ *  @brief      Disable UART receive
  *
- * @param[in] handle    UARTハンドル
- * @return オーバーランカウント
+ *  Disables the receive function and releases power constraints.
+ *
+ *  @param[in]  handle      UART handle
+ *
+ *  @pre        UART_RegInt_open() called successfully
  */
-uint32_t UART_RegInt_getOverrunCount(UART_RegInt_Handle handle);
+extern void UART_RegInt_rxDisable(UART_RegInt_Handle handle);
+
+/*!
+ *  @brief      Get receive overrun count
+ *
+ *  Returns the cumulative count of receive overrun errors since the UART
+ *  was opened.
+ *
+ *  @param[in]  handle      UART handle
+ *
+ *  @return     Overrun error count
+ *
+ *  @pre        UART_RegInt_open() called successfully
+ */
+extern uint32_t UART_RegInt_getOverrunCount(UART_RegInt_Handle handle);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* UART_REGINT_H */
+#endif /* ti_drivers_UART_RegInt__include */

@@ -1,7 +1,29 @@
 # CLAUDE.md
-UART0のレジスタガイド: @/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/docs/driverlib/driverlib/register_descriptions/CPU_MMAP/UART0.html
+UART0のレジスタガイド:
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/docs/driverlib/driverlib/register_descriptions/CPU_MMAP/UART0.html
+
+各種ドライバー
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers
+
+UARTドライバー
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers/UART2.c
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers/uart2/UART2LPF3.c
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers/uart2/UART2LPF3.h
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers/uart2/UART2Support.h
+
+HwP系
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/drivers/dpl/HwiP.h
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+HW固有定義
+UART：/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/devices/cc23x0r5/inc/hw_uart.h
+固有マクロ・型定義
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/devices/cc23x0r5/inc/hw_types.h
+
+ドライバーライブラリ
+UART : /home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/devices/cc23x0r5/driverlib/uart.c
+/home/yaruha/project-dev/else-dev/LIN_Workspace/TI/ti/devices/cc23x0r5/driverlib/uart.c
 ## プロジェクト概要
 
 このリポジトリは、Texas Instruments CC2340R53マイコン向けのLIN通信スタックの実装です。主に2つのコンポーネントで構成されています：

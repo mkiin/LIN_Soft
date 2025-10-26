@@ -1,51 +1,43 @@
-# UART_RegInt - レジスタ割り込みベースUARTドライバ
+# UART_RegInt Driver
 
 ## 概要
 
-CC2340R53マイコン向けのDMA非依存UARTドライバです。TI社のUART2ドライバとAPI互換性を持ち、LIN通信スタックでの使用を想定しています。
+UART_RegIntは、DMA機能を使用しないレジスタ割り込みベースのUARTドライバです。Texas Instruments社のUART2ドライバとAPI互換性を持ち、CC2340R53（CC23X0R5）マイコン向けに最適化されています。
 
 ## 特徴
 
-- ✅ **DMA不要**: レジスタ直接アクセスと割り込み処理のみ
-- ✅ **TI UART2互換API**: 既存コードからの移行が容易
-- ✅ **2つの動作モード**: BLOCKING / CALLBACK
-- ✅ **エラー検出**: Overrun, Framing, Parity, Break
-- ✅ **電源管理統合**: PowerLPF3ドライバ対応
-- ✅ **CC2340R53最適化**: CC23X0ファミリ向けに最適化
+- **DMA不要**: レジスタ直接アクセスと割り込み処理のみで動作
+- **TI UART2互換API**: 既存のUART2コードからの移行が容易
+- **2つの動作モード**: BLOCKING（同期）/ CALLBACK（非同期）
+- **エラー検出**: Overrun, Framing, Parity, Break エラーに対応
+- **電源管理統合**: PowerLPF3ドライバと連携
+- **低レイテンシ**: 8バイトFIFOを活用した効率的な割り込み処理
 
 ## ファイル構成
 
 ```
 UART_DRV/
-├── README.md                   # このファイル
-├── UART_RegInt.h               # 公開API (アプリケーションからインクルード)
-├── UART_RegInt.c               # 実装ファイル
-├── UART_RegInt_Config.h        # デバイス固有設定 (CC2340R53)
-└── UART_RegInt_Priv.h          # 内部定義 (アプリケーション使用不可)
-
-docs/
-├── UART_RegInt_API_Reference.md  # API利用リファレンス
-└── UART_RegInt_Design.md         # 設計ドキュメント
+├── UART_RegInt.h              # 公開API
+├── UART_RegInt.c              # 共通実装
+├── uart_regint/               # デバイス固有実装
+│   ├── UART_RegIntLPF3.h      # CC23X0R5固有定義
+│   ├── UART_RegIntLPF3.c      # CC23X0R5固有実装
+│   └── UART_RegIntSupport.h   # 内部サポート関数
+└── README.md                  # このファイル
 ```
 
-## クイックスタート
+## 使用方法
 
-### 1. インクルード
-
-```c
-#include "UART_DRV/UART_RegInt.h"
-```
-
-### 2. 初期化
+### 1. 初期化
 
 ```c
-UART_RegInt_Handle handle;
-UART_RegInt_Params params;
+#include "UART_RegInt.h"
 
-// モジュール初期化 (main関数で1回)
+// モジュール初期化（main関数で1回のみ）
 UART_RegInt_init();
 
 // パラメータ設定
+UART_RegInt_Params params;
 UART_RegInt_Params_init(&params);
 params.baudRate = 9600;
 params.readMode = UART_REGINT_MODE_CALLBACK;
@@ -54,215 +46,268 @@ params.readCallback = myReadCallback;
 params.writeCallback = myWriteCallback;
 
 // UART開始
-handle = UART_RegInt_open(0, &params);
+UART_RegInt_Handle handle = UART_RegInt_open(0, &params);
 if (handle == NULL) {
     // エラー処理
 }
 ```
 
-### 3. データ送受信
+### 2. データ送信
 
+#### BLOCKINGモード
 ```c
-// 受信 (コールバックモード)
-uint8_t rxBuf[8];
-UART_RegInt_read(handle, rxBuf, 8);  // 即座に戻る
-
-// 送信 (コールバックモード)
-uint8_t txBuf[8] = {0x55, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-UART_RegInt_write(handle, txBuf, 8);  // 即座に戻る
-
-// 受信 (ブロッキングモード)
-int_fast16_t result = UART_RegInt_readTimeout(handle, rxBuf, 8, 100000); // 100msタイムアウト
+uint8_t txBuf[8] = {0x55, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+int_fast16_t result = UART_RegInt_write(handle, txBuf, 8);
 if (result == 8) {
-    // 8バイト受信成功
+    // 送信成功
 }
 ```
 
-### 4. コールバック実装
-
+#### CALLBACKモード
 ```c
-void myReadCallback(UART_RegInt_Handle handle, void *buf, size_t count,
-                   void *userArg, int_fast16_t status)
-{
-    if (status == UART_REGINT_STATUS_SUCCESS) {
-        // count バイト受信成功
-        processData(buf, count);
-    } else {
-        // エラー処理
-    }
-}
-
 void myWriteCallback(UART_RegInt_Handle handle, void *buf, size_t count,
                     void *userArg, int_fast16_t status)
 {
     if (status == UART_REGINT_STATUS_SUCCESS) {
         // 送信完了
-        startNextTransmission();
     }
+}
+
+// 送信開始（即座に戻る）
+UART_RegInt_write(handle, txBuf, 8);
+```
+
+### 3. データ受信
+
+#### BLOCKINGモード
+```c
+uint8_t rxBuf[8];
+int_fast16_t result = UART_RegInt_read(handle, rxBuf, 8);
+if (result == 8) {
+    // 8バイト受信成功
 }
 ```
 
-## LINソフトでの使用
-
-既存のLINソフト (`l_slin_drv_cc2340r53.c`) から使用する場合:
-
+#### CALLBACKモード
 ```c
-// 初期化
-void l_vog_lin_uart_init(void)
+void myReadCallback(UART_RegInt_Handle handle, void *buf, size_t count,
+                   void *userArg, int_fast16_t status)
 {
-    UART_RegInt_Params params;
-    
-    UART_RegInt_init();
-    UART_RegInt_Params_init(&params);
-    params.baudRate = U4L_LIN_BAUDRATE;
-    params.readMode = UART_REGINT_MODE_CALLBACK;
-    params.writeMode = UART_REGINT_MODE_CALLBACK;
-    params.readCallback = l_ifc_rx_ch1;  // 既存のコールバック
-    params.writeCallback = l_ifc_tx_ch1;
-    
-    xnl_lin_uart_handle = UART_RegInt_open(0, &params);
-    if (xnl_lin_uart_handle == NULL) {
-        u1g_lin_syserr = U1G_LIN_SYSERR_DRIVER;
+    if (status == UART_REGINT_STATUS_SUCCESS) {
+        // 受信完了
+        processData(buf, count);
     }
 }
 
-// 受信開始
-void l_vog_lin_rx_enb(uint8_t u1a_lin_flush_rx, uint8_t u1a_lin_rx_data_size)
-{
-    UART_RegInt_read(xnl_lin_uart_handle, u1l_lin_rx_buf, u1a_lin_rx_data_size);
-}
+// 受信開始（即座に戻る）
+UART_RegInt_read(handle, rxBuf, 8);
+```
 
-// 送信
-void l_vog_lin_tx_char(const l_u8 u1a_lin_data[], size_t u1a_lin_data_size)
-{
-    memcpy(u1l_lin_tx_buf, u1a_lin_data, u1a_lin_data_size);
-    UART_RegInt_write(xnl_lin_uart_handle, u1l_lin_tx_buf, u1a_lin_data_size);
+### 4. タイムアウト付き送受信
+
+```c
+// 100msタイムアウト
+int_fast16_t result = UART_RegInt_readTimeout(handle, rxBuf, 8, 100000);
+if (result == UART_REGINT_STATUS_ETIMEOUT) {
+    // タイムアウト
 }
+```
+
+### 5. 受信制御
+
+```c
+// 受信有効化（スタンバイ禁止制約を設定）
+UART_RegInt_rxEnable(handle);
+
+// 受信無効化（スタンバイ禁止制約を解除）
+UART_RegInt_rxDisable(handle);
+```
+
+## 設定例（ti_drivers_config.c）
+
+```c
+#include "UART_RegInt.h"
+#include "uart_regint/UART_RegIntLPF3.h"
+
+/* UART objects */
+UART_RegIntLPF3_Object uart_RegIntLPF3Objects[1];
+
+/* UART hardware attributes */
+const UART_RegIntLPF3_HWAttrs uart_RegIntLPF3HWAttrs[1] = {
+    {
+        .baseAddr     = UART0_BASE,
+        .intNum       = INT_UART0_COMB,
+        .intPriority  = 0x20,
+        .rxPin        = CONFIG_GPIO_UART_0_RX,
+        .txPin        = CONFIG_GPIO_UART_0_TX,
+        .ctsPin       = GPIO_INVALID_INDEX,
+        .rtsPin       = GPIO_INVALID_INDEX,
+        .flowControl  = UART_REGINT_FLOWCTRL_NONE,
+        .rxBufPtr     = NULL,
+        .rxBufSize    = 0,
+        .txBufPtr     = NULL,
+        .txBufSize    = 0,
+        .txPinMux     = GPIO_MUX_PORTCFG_PFUNC3,
+        .rxPinMux     = GPIO_MUX_PORTCFG_PFUNC3,
+        .ctsPinMux    = GPIO_MUX_GPIO_INTERNAL,
+        .rtsPinMux    = GPIO_MUX_GPIO_INTERNAL,
+        .powerID      = PowerLPF3_PERIPH_UART0,
+    },
+};
+
+/* UART configuration */
+const UART_RegInt_Config UART_RegInt_config[1] = {
+    {
+        .object  = &uart_RegIntLPF3Objects[0],
+        .hwAttrs = &uart_RegIntLPF3HWAttrs[0]
+    },
+};
+
+const uint_least8_t UART_RegInt_count = 1;
 ```
 
 ## TI UART2からの移行
 
 ### API対応表
 
-| TI UART2 | UART_RegInt |
-|----------|-------------|
-| `UART2_init()` | `UART_RegInt_init()` |
-| `UART2_open()` | `UART_RegInt_open()` |
-| `UART2_close()` | `UART_RegInt_close()` |
-| `UART2_read()` | `UART_RegInt_read()` |
-| `UART2_write()` | `UART_RegInt_write()` |
-| `UART2_readTimeout()` | `UART_RegInt_readTimeout()` |
-| `UART2_writeTimeout()` | `UART_RegInt_writeTimeout()` |
-| `UART2_rxEnable()` | `UART_RegInt_rxEnable()` |
-| `UART2_rxDisable()` | `UART_RegInt_rxDisable()` |
+| TI UART2 | UART_RegInt | 備考 |
+|----------|-------------|------|
+| `UART2_init()` | `UART_RegInt_init()` | 同じ |
+| `UART2_open()` | `UART_RegInt_open()` | 同じ |
+| `UART2_close()` | `UART_RegInt_close()` | 同じ |
+| `UART2_read()` | `UART_RegInt_read()` | 同じ |
+| `UART2_write()` | `UART_RegInt_write()` | 同じ |
+| `UART2_readTimeout()` | `UART_RegInt_readTimeout()` | 同じ |
+| `UART2_writeTimeout()` | `UART_RegInt_writeTimeout()` | 同じ |
 
-### 変更手順
+### 移行手順
 
-1. インクルードを変更: `#include <ti/drivers/UART2.h>` → `#include "UART_DRV/UART_RegInt.h"`
-2. 型名を置換: `UART2_` → `UART_REGINT_`
-3. マクロを置換: `UART2_Mode_CALLBACK` → `UART_REGINT_MODE_CALLBACK`
+1. **インクルード変更**:
+   ```c
+   // 変更前
+   #include <ti/drivers/UART2.h>
+   
+   // 変更後
+   #include "UART_RegInt.h"
+   ```
 
-詳細は [API Reference](../docs/UART_RegInt_API_Reference.md) を参照してください。
+2. **型名変更**:
+   ```c
+   // 変更前
+   UART2_Handle handle;
+   UART2_Params params;
+   
+   // 変更後
+   UART_RegInt_Handle handle;
+   UART_RegInt_Params params;
+   ```
+
+3. **マクロ変更**:
+   ```c
+   // 変更前
+   UART2_Mode_CALLBACK
+   
+   // 変更後
+   UART_REGINT_MODE_CALLBACK
+   ```
 
 ## パフォーマンス
 
-### LIN通信での性能 (9600 bps)
+### LIN通信での性能（9600 bps）
 
 - **1バイト送信時間**: 1.04 ms
 - **8バイトフレーム**: 8.3 ms
-- **割り込み頻度**: 約6.2ms (RX), 約2.1ms (TX)
-- **割り込み処理時間**: ~10μs
-- **オーバーヘッド**: フレーム時間の0.12%未満
+- **FIFO深度**: 8バイト
+- **割り込み頻度**: 
+  - RX: 約6.2ms間隔（FIFO 6/8到達時）
+  - TX: 約2.1ms間隔（FIFO 2/8到達時）
+- **割り込み処理時間**: ~10μs（1バイト処理）
 
-→ **結論**: LIN通信には十分な性能
+**結論**: 割り込み処理時間はフレーム時間の0.12%程度であり、LIN通信に十分な性能を提供します。
 
-## メモリ使用量
+## エラー処理
 
-- **RAM**: 約100-120 bytes (オブジェクト1個あたり)
-- **Flash**: 約4-5 KB (TI UART2の50-60%削減)
+### エラーコード
 
-## 対応ボーレート
+| コード | 値 | 説明 |
+|--------|---|------|
+| `UART_REGINT_STATUS_SUCCESS` | 0 | 成功 |
+| `UART_REGINT_STATUS_EOVERRUN` | -8 | オーバーランエラー |
+| `UART_REGINT_STATUS_EFRAMING` | -5 | フレーミングエラー |
+| `UART_REGINT_STATUS_EPARITY` | -6 | パリティエラー |
+| `UART_REGINT_STATUS_EBREAK` | -7 | ブレークエラー |
+| `UART_REGINT_STATUS_ETIMEOUT` | -3 | タイムアウト |
+| `UART_REGINT_STATUS_ECANCELLED` | -4 | キャンセル |
 
-- 2400 bps
-- 9600 bps (デフォルト)
-- 19200 bps
-- 38400 bps
-- 57600 bps
-- 115200 bps
+### イベントコールバック
 
-## デバイスサポート
+エラー発生時に即座に通知を受け取ることができます：
 
-- ✅ Texas Instruments CC2340R53 (CC23X0R5)
-- ⚠️ 他のCC23X0ファミリは要テスト
-- ❌ CC27XXファミリは非対応 (クロック設定が異なる)
+```c
+void myEventCallback(UART_RegInt_Handle handle, uint32_t event,
+                    uint32_t data, void *userArg)
+{
+    if (event & UART_REGINT_EVENT_OVERRUN) {
+        // オーバーランエラー処理
+    }
+    if (event & UART_REGINT_EVENT_FRAMING) {
+        // フレーミングエラー処理
+    }
+}
 
-## ビルド要件
-
-### 必須インクルードパス
-
-```makefile
-INCLUDES = \
-    -I$(TI_SDK)/source \
-    -I$(TI_SDK)/source/ti/devices/cc23x0r5 \
-    -I$(PROJECT_ROOT)/UART_DRV
+params.eventCallback = myEventCallback;
+params.eventMask = UART_REGINT_EVENT_OVERRUN | UART_REGINT_EVENT_FRAMING;
 ```
 
-### 必須リンクライブラリ
+## 制限事項
 
-- TI DriverLib (driverlib.lib)
-- TI Drivers (drivers_cc23x0r5.lib)
+1. **DMA非対応**: 高速大容量転送には不向き（LIN通信では問題なし）
+2. **同時トランザクション**: 送信/受信それぞれ1つまで
+3. **対応デバイス**: CC2340R53（CC23X0R5ファミリー）
 
-## テスト状況
+## デバッグ
 
-| テスト項目 | 状態 |
-|-----------|------|
-| 単体テスト | ⏳ 未実施 |
-| LINソフト統合テスト | ⏳ 未実施 |
-| 電源管理テスト | ⏳ 未実施 |
-| ストレステスト | ⏳ 未実施 |
+### よくある問題
 
-## 既知の制限事項
+**問題**: データが受信できない
+- **確認**: `UART_RegInt_rxEnable()`を呼び出しているか
+- **確認**: 割り込み優先度が適切か（0以外）
+- **確認**: GPIO設定が正しいか
 
-1. **DMA非対応**: 高速大容量転送には不向き (LINでは問題なし)
-2. **フロー制御なし**: CTS/RTS未実装 (LINでは不要)
-3. **単一インスタンス**: UART0のみ対応
-4. **同時トランザクション**: 送信/受信それぞれ1つまで
+**問題**: オーバーランエラーが頻発
+- **原因**: 割り込み処理が間に合っていない
+- **対策**: 割り込み優先度を上げる、または他の処理を軽量化
 
-## トラブルシューティング
+**問題**: 送信が完了しない
+- **確認**: writeCallbackが呼ばれているか
+- **確認**: TX割り込みが有効化されているか
 
-### ビルドエラー: "UART0_BASE undeclared"
+### オーバーランカウント取得
 
-→ インクルードパスに `ti/devices/cc23x0r5` が含まれているか確認
-
-### 実行時エラー: ハンドルがNULL
-
-→ `UART_RegInt_init()` が呼ばれているか確認  
-→ `UART_RegInt_count` と `UART_RegInt_config[]` が定義されているか確認
-
-### 受信データが取得できない
-
-→ `UART_RegInt_read()` が呼ばれているか確認  
-→ 受信割り込みが有効化されているか確認  
-→ ボーレート設定が一致しているか確認
-
-## ドキュメント
-
-詳細なドキュメントは `docs/` フォルダを参照してください:
-
-- **[API Reference](../docs/UART_RegInt_API_Reference.md)**: 全API関数の詳細、使用例、LINソフト統合方法
-- **[Design Document](../docs/UART_RegInt_Design.md)**: 設計思想、アーキテクチャ、動作フロー、レジスタ詳細
+```c
+uint32_t overruns = UART_RegInt_getOverrunCount(handle);
+if (overruns > 0) {
+    // オーバーランが発生
+}
+```
 
 ## ライセンス
 
-このドライバはプロジェクトのライセンスに従います。
+このドライバは、Texas Instruments社のUART2ドライバの構造をベースにしていますが、独自実装です。
 
-## サポート
+## 参照
 
-問題や質問がある場合は、プロジェクトのIssueトラッカーに報告してください。
+- Texas Instruments CC2340R53 Technical Reference Manual
+- TI-RTOS Kernel User's Guide
+- LIN Specification 2.2A
+
+## 変更履歴
+
+| バージョン | 日付 | 変更内容 |
+|-----------|------|---------|
+| 1.0 | 2025-01-26 | 初版リリース |
 
 ---
 
-**バージョン**: 1.0  
-**作成日**: 2025-10-26  
-**対象デバイス**: Texas Instruments CC2340R53 (CC23X0R5)  
-**依存**: TI SimpleLink SDK, TI DriverLib
+**作成者**: Based on TI UART2 driver structure  
+**対象デバイス**: Texas Instruments CC2340R53 (CC23X0R5)
