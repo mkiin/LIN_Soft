@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <ti/drivers/UART2.h>
+#include "../UART_DRV/UART_RegInt.h"
 #include <ti/drivers/timer/LGPTimerLPF3.h>
 
 
@@ -202,8 +202,8 @@ extern void     l_ifc_wake_up_ch1(void);
 extern l_u16    l_ifc_read_status_ch1(void);
 extern void     l_ifc_sleep_ch1(void);
 extern void     l_ifc_run_ch1(void);
-extern void     l_ifc_rx_ch1(UART2_Handle handle, void *u1a_lin_rx_data, size_t count, void *userArg, int_fast16_t u1a_lin_rx_status);
-extern void     l_ifc_tx_ch1(UART2_Handle handle, void *u1a_lin_tx_data, size_t count, void *userArg, int_fast16_t u1a_lin_tx_status);
+extern void     l_ifc_rx_ch1(UART_RegInt_Handle handle, void *u1a_lin_rx_data, size_t count, void *userArg, int_fast16_t u1a_lin_rx_status);
+extern void     l_ifc_tx_ch1(UART_RegInt_Handle handle, void *u1a_lin_tx_data, size_t count, void *userArg, int_fast16_t u1a_lin_tx_status);
 extern void     l_ifc_tm_ch1(LGPTimerLPF3_Handle handle, LGPTimerLPF3_IntMask interruptMask);
 extern void     l_ifc_aux_ch1(uint_least8_t index);
 extern l_u16    l_ifc_read_lb_status_ch1(void);
