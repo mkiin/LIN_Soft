@@ -124,12 +124,19 @@ while( 0 )
 /********************************************************************************/
 /* 公開関数(SLIN外部)プロトタイプ宣言                                        */
 /********************************************************************************/
-extern void  l_vog_lin_rx_int(l_u8 u1a_lin_data[], l_u8 u1a_lin_err);
+extern void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err);  /* H850互換: 1バイト受信 */
 extern void  l_vog_lin_tm_int(void);
 extern void  l_vog_lin_irq_int(void);
 extern l_u8  l_vog_lin_checksum(l_u8 u1a_lin_pid ,const l_u8* u1a_lin_data, l_u8 u1a_lin_data_length, U1G_LIN_ChecksumType type);
-extern void  l_vog_lin_tx_char(const l_u8 u1a_lin_data[], size_t u1a_lin_data_size);
-extern void l_ifc_uart_close(void);
+extern void  l_vog_lin_tx_char(l_u8 u1a_lin_data);
+extern l_u8  l_u1g_lin_read_back(l_u8 u1a_lin_data);
+extern void  l_ifc_uart_close(void);
+extern void  l_vog_lin_timer_init(void);
+extern void  l_vog_lin_bit_tm_set(l_u8 u1a_lin_bit);
+extern void  l_vog_lin_rcv_tm_set(l_u8 u1a_lin_bit);
+extern void  l_vog_lin_bus_tm_set(void);
+extern void  l_vog_lin_frm_tm_stop(void);
+extern void  l_vog_lin_timer_close(void);
 #endif
 
 /***** End of File *****/

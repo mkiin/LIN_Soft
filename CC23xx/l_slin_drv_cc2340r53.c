@@ -68,8 +68,8 @@ void   l_vog_lin_int_enb(void);
 void  l_vog_lin_int_enb_wakeup(void);
 /* Ver 2.00 追加:ウェイクアップ信号検出エッジの極性切り替えへの対応 */
 void   l_vog_lin_int_dis(void);
-void   l_vog_lin_tx_char(const l_u8 u1a_lin_data[], size_t u1a_lin_data_size);
-l_u8   l_u1g_lin_read_back(l_u8 u1a_lin_data[],l_u8 u1a_lin_data_size);
+void   l_vog_lin_tx_char(l_u8 u1a_lin_data);
+l_u8   l_u1g_lin_read_back(l_u8 u1a_lin_data);
 
 /*** 変数(static) ***/
 static l_u16            u2l_lin_tm_bit;             /* 1bitタイム値 */
@@ -198,19 +198,39 @@ void  l_vog_lin_int_init(void)
  */
 void  l_ifc_rx_ch1(UART2_Handle handle, void *u1a_lin_rx_data, size_t count, void *userArg, int_fast16_t u1a_lin_rx_status)
 {
-    l_u8    u1a_lin_rx_set_err;
-    UART2_Object *object = handle->object;
+    l_u8    u1a_lin_rx_err;
+    l_u8    u1a_lin_rx_byte;
+    l_u32   u4a_lin_error_status;
 
-    // /* 指定バイト読めたらコールバック処理を実行 */
-    // if (object->bytesRead != object->readSize)
-    // {
-    //     return;
-    // }
+    /* 受信データ取得 (1バイト目のみ) */
+    u1a_lin_rx_byte = ((l_u8 *)u1a_lin_rx_data)[0];
+
+    /* エラーステータスをレジスタから取得 */
+    u4a_lin_error_status = U4L_LIN_HWREG(((( UART2_HWAttrs const * )( xnl_lin_uart_handle->hwAttrs ))->baseAddr + UART_O_RSR_ECR ));
 
     /* 受信エラー情報の生成 */
-    u1a_lin_rx_set_err = U1G_LIN_BYTE_CLR;//現在エラー検出未実装
-    l_vog_lin_rx_int( (l_u8 *)u1a_lin_rx_data, u1a_lin_rx_set_err );     /* スレーブタスクに受信報告 */
+    u1a_lin_rx_err = U1G_LIN_BYTE_CLR;
 
+    /* オーバーランエラーチェック */
+    if( ( u4a_lin_error_status & U1G_LIN_OVERRUN_REG_ERR ) == U1G_LIN_OVERRUN_REG_ERR )
+    {
+        u1a_lin_rx_err |= U1G_LIN_SOER_SET;     /* オーバーランエラー発生 */
+    }
+
+    /* フレーミングエラーチェック */
+    if( ( u4a_lin_error_status & U1G_LIN_FRAMING_REG_ERR ) == U1G_LIN_FRAMING_REG_ERR )
+    {
+        u1a_lin_rx_err |= U1G_LIN_SFER_SET;     /* フレーミングエラー発生 */
+    }
+
+    /* パリティエラーチェック */
+    if( ( u4a_lin_error_status & U1G_LIN_PARITY_REG_ERR ) == U1G_LIN_PARITY_REG_ERR )
+    {
+        u1a_lin_rx_err |= U1G_LIN_SPER_SET;     /* パリティエラー発生 */
+    }
+
+    /* スレーブタスクに受信報告 (1バイト) */
+    l_vog_lin_rx_int( u1a_lin_rx_byte, u1a_lin_rx_err );
 }
 /**
  * @brief   データの送信完了割り込み(API)
@@ -428,14 +448,19 @@ void  l_vog_lin_int_dis(void)
  * @endcond
  *
  */
-void  l_vog_lin_tx_char(const l_u8 u1a_lin_data[], size_t u1a_lin_data_size)
+void  l_vog_lin_tx_char(l_u8 u1a_lin_data)
 {
-    l_vog_lin_rx_enb(U1G_LIN_FLUSH_RX_NO_USE,u1a_lin_data_size);
-    /* 送信バッファレジスタに データを格納 */
+    /* 1バイト受信許可（Half-Duplex用リードバック） */
+    l_vog_lin_rx_enb(U1G_LIN_FLUSH_RX_NO_USE, U1G_LIN_1);
+
+    /* 送信バッファに1バイト格納 */
+    u1l_lin_tx_buf[U1G_LIN_0] = u1a_lin_data;
+
+    /* 1バイト送信 */
 #if ORIGINAL_UART_DRIVER
-    UART2_write(xnl_lin_uart_handle,u1a_lin_data,u1a_lin_data_size,NULL);
+    UART2_write(xnl_lin_uart_handle, u1l_lin_tx_buf, U1G_LIN_1, NULL);
 #else
-    UART_RegInt_write(xnl_lin_uart_handle,u1a_lin_data,u1a_lin_data_size);
+    UART_RegInt_write(xnl_lin_uart_handle, u1l_lin_tx_buf, U1G_LIN_1);
 #endif
 }
 /**
@@ -465,11 +490,11 @@ void  l_vog_lin_tx_char(const l_u8 u1a_lin_data[], size_t u1a_lin_data_size)
  * @endcond
  *
  */
-l_u8  l_u1g_lin_read_back(l_u8 u1a_lin_data[],l_u8 u1a_lin_data_size)
+l_u8  l_u1g_lin_read_back(l_u8 u1a_lin_data)
 {
     l_u8    u1a_lin_result;
     l_u32   u4a_lin_error_status;
-    l_u8    u1a_lin_index;
+
     /* エラーステータスをレジスタから取得 */
     u4a_lin_error_status  = U4L_LIN_HWREG(((( UART2_HWAttrs const * )( xnl_lin_uart_handle->hwAttrs ))->baseAddr +  UART_O_RSR_ECR ));
     u4a_lin_error_status  = U4G_DAT_ZERO; /*一旦エラー検出機能オフ*/
@@ -477,20 +502,20 @@ l_u8  l_u1g_lin_read_back(l_u8 u1a_lin_data[],l_u8 u1a_lin_data_size)
     /* エラーが発生しているかをチェック */
     if(    ( ( u4a_lin_error_status & U4G_LIN_UART_ERR_OVERRUN ) == U4G_LIN_UART_ERR_OVERRUN )
         || ( ( u4a_lin_error_status & U4G_LIN_UART_ERR_PARITY  ) == U4G_LIN_UART_ERR_PARITY  )
-        || ( ( u4a_lin_error_status & U4G_LIN_UART_ERR_FRAMING ) == U4G_LIN_UART_ERR_FRAMING ) ) 
+        || ( ( u4a_lin_error_status & U4G_LIN_UART_ERR_FRAMING ) == U4G_LIN_UART_ERR_FRAMING ) )
     {
         u1a_lin_result = U1G_LIN_NG;
     }
-    else 
+    else
     {
-        u1a_lin_result = U1G_LIN_OK;
-        /* 受信バッファの内容と引数を比較 */
-        for (u1a_lin_index = U1G_DAT_ZERO; u1a_lin_index < u1a_lin_data_size; u1a_lin_index++) 
+        /* 受信バッファの1バイト目と引数を比較 */
+        if(u1l_lin_rx_buf[U1G_LIN_0] != u1a_lin_data)
         {
-            if(u1l_lin_rx_buf[u1a_lin_index] != u1a_lin_data[u1a_lin_index]) 
-            {
-                u1a_lin_result = U1G_LIN_NG;
-            }
+            u1a_lin_result = U1G_LIN_NG;
+        }
+        else
+        {
+            u1a_lin_result = U1G_LIN_OK;
         }
     }
 
@@ -535,4 +560,238 @@ void l_ifc_uart_close(void)
     #endif
     xnl_lin_uart_handle = NULL;
 }
+
+/**
+ * @brief LINタイマー割り込みコールバック
+ * @param handle タイマーハンドル
+ * @param interruptMask 割り込みマスク
+ */
+void l_ifc_tm_ch1(LGPTimerLPF3_Handle handle, LGPTimerLPF3_IntMask interruptMask)
+{
+    if (interruptMask & LGPTimerLPF3_INT_TGT)
+    {
+        /* SLIN CORE層のタイマー割り込みハンドラ呼び出し */
+        l_vog_lin_tm_int();
+    }
+}
+
+/**
+ * @brief LINタイマー初期化
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - LGPTimerのパラメータ初期化
+ *      - タイマーコールバック設定
+ *      - LGPTimer0をオープン
+ *      - エラー時はシステム異常フラグ設定
+ *
+ * @par 19200bps設定
+ *      - 1ビット = 52.08us
+ *      - u4l_lin_us_per_bit_x10000 = 520833UL
+ * @endcond
+ */
+void l_vog_lin_timer_init(void)
+{
+    LGPTimerLPF3_Params params;
+
+    /* パラメータ初期化 */
+    LGPTimerLPF3_Params_init(&params);
+    params.hwiCallbackFxn = l_ifc_tm_ch1;
+    params.prescalerDiv = 0;  /* プリスケーラなし (48MHz直接) */
+
+    /* タイマーオープン (LGPT0を使用) */
+    xnl_lin_timer_handle = LGPTimerLPF3_open(0, &params);
+
+    if (xnl_lin_timer_handle == NULL)
+    {
+        /* エラー処理 */
+        u1g_lin_syserr = U1G_LIN_SYSERR_TIMER;
+    }
+}
+
+/**
+ * @brief ビットタイマ設定
+ * @param u1a_lin_bit タイマ設定値（ビット長）
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - タイマー停止
+ *      - ビット長をマイクロ秒に変換
+ *        @19200bps: 1ビット = 52.08us
+ *        計算式: timeout_us = u1a_lin_bit * 520833 / 10000
+ *      - カウンタターゲット計算 (48MHz = 48カウント/us)
+ *      - カウンタターゲット設定
+ *      - ワンショットモードで開始
+ *
+ * @par 使用例
+ *      - Response Space: l_vog_lin_bit_tm_set(1)  -> 52.08us
+ *      - Inter-byte Space: l_vog_lin_bit_tm_set(11) -> 572.9us (10bit + 1bit)
+ * @endcond
+ */
+void l_vog_lin_bit_tm_set(l_u8 u1a_lin_bit)
+{
+    l_u32 u4a_lin_counter_target;
+    l_u32 u4a_lin_timeout_us;
+
+    /* タイマー停止 */
+    if (xnl_lin_timer_handle != NULL)
+    {
+        LGPTimerLPF3_stop(xnl_lin_timer_handle);
+    }
+
+    /* ビット長をマイクロ秒に変換 */
+    /* @19200bps: 1ビット = 52.08us = 520833 / 10000 us */
+    u4a_lin_timeout_us = ((l_u32)u1a_lin_bit * U4L_LIN_1BIT_TIMERVAL) / 1000UL;
+
+    /* カウンタターゲット計算 */
+    /* システムクロック48MHz = 48カウント/us */
+    u4a_lin_counter_target = u4a_lin_timeout_us * 48UL;
+
+    /* 0始まりなので-1 */
+    if (u4a_lin_counter_target > 0UL)
+    {
+        u4a_lin_counter_target -= 1UL;
+    }
+
+    /* オーバーフロー対策（16ビットタイマーLGPT0の場合） */
+    if (u4a_lin_counter_target > 0xFFFFUL)
+    {
+        u4a_lin_counter_target = 0xFFFFUL;
+    }
+
+    /* カウンタターゲット設定 */
+    LGPTimerLPF3_setInitialCounterTarget(xnl_lin_timer_handle, u4a_lin_counter_target, true);
+
+    /* ターゲット割り込み許可 */
+    LGPTimerLPF3_enableInterrupt(xnl_lin_timer_handle, LGPTimerLPF3_INT_TGT);
+
+    /* ワンショットモードで開始 */
+    LGPTimerLPF3_start(xnl_lin_timer_handle, LGPTimerLPF3_CTL_MODE_UP_ONCE);
+}
+
+/**
+ * @brief フレームタイマ停止
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - LGPTimerを停止
+ * @endcond
+ */
+void l_vog_lin_frm_tm_stop(void)
+{
+    if (xnl_lin_timer_handle != NULL)
+    {
+        LGPTimerLPF3_stop(xnl_lin_timer_handle);
+    }
+}
+
+/**
+ * @brief 受信タイムアウトタイマー設定
+ *
+ * @param[in] u1a_lin_bit タイマー設定ビット数
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - データ受信時のタイムアウトタイマーを設定
+ *      - LIN規格: (Data Length + Checksum) × 1.4 で計算
+ *      - @19200bps: 1 bit = 52.08μs
+ *
+ * @par 計算式
+ *      タイムアウト時間 = u1a_lin_bit × 1.4 × 52.08μs
+ *
+ * @par 使用例
+ *      - フレームサイズ8の場合: l_vog_lin_rcv_tm_set(90)
+ *        → (8データ + 1チェックサム) × 10bit = 90bit
+ *        → 90 × 1.4 = 126bit
+ *        → 126 × 52.08μs = 6.56ms
+ * @endcond
+ */
+void l_vog_lin_rcv_tm_set(l_u8 u1a_lin_bit)
+{
+    l_u32 u4a_lin_timeout_us;
+    l_u32 u4a_lin_counter_target;
+
+    /* タイムアウト時間の計算: (bit数 × 1.4) */
+    /* 1.4倍 = 14/10 で計算 */
+    l_u16 u2a_lin_tmp_bit = (((l_u16)u1a_lin_bit * 14U) / 10U);
+
+    /* マイクロ秒単位の時間に変換 (@19200bps: 1bit = 52.08us) */
+    u4a_lin_timeout_us = ((l_u32)u2a_lin_tmp_bit * U4L_LIN_1BIT_TIMERVAL) / 1000UL;
+
+    /* 48MHzクロックでのカウンタターゲット値計算 */
+    u4a_lin_counter_target = u4a_lin_timeout_us * 48UL - 1UL;
+
+    /* タイマー設定 */
+    LGPTimerLPF3_setInitialCounterTarget(xnl_lin_timer_handle, u4a_lin_counter_target, true);
+
+    /* ターゲット割り込み許可 */
+    LGPTimerLPF3_enableInterrupt(xnl_lin_timer_handle, LGPTimerLPF3_INT_TGT);
+
+    /* ワンショットモードで開始 */
+    LGPTimerLPF3_start(xnl_lin_timer_handle, LGPTimerLPF3_CTL_MODE_UP_ONCE);
+}
+
+/**
+ * @brief Physical Busエラー検出タイマー設定
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - Physical Busエラー検出用の長時間タイマーを設定
+ *      - LIN規格: 25000 bit時間でタイムアウト
+ *      - @19200bps: 25000 × 52.08μs = 1.302秒
+ *
+ * @par 使用目的
+ *      - Break待ち状態でのバスエラー検出
+ *      - 510回連続のヘッダータイムアウト相当時間
+ *      - バスの物理的な異常を検出
+ *
+ * @par 備考
+ *      - Synch Break受信待ち設定時に呼び出される
+ *      - l_vol_lin_set_synchbreak() から呼び出し
+ * @endcond
+ */
+void l_vog_lin_bus_tm_set(void)
+{
+    l_u32 u4a_lin_timeout_us;
+    l_u32 u4a_lin_counter_target;
+    l_u16 u2a_lin_tmp_bit;
+
+    /* Physical Busエラータイムアウト: 25000 bit */
+    u2a_lin_tmp_bit = 25000U;
+
+    /* マイクロ秒単位の時間に変換 (@19200bps: 1bit = 52.08us) */
+    /* 25000 bit × 52.08us = 1,302,000 us = 1.302秒 */
+    u4a_lin_timeout_us = ((l_u32)u2a_lin_tmp_bit * U4L_LIN_1BIT_TIMERVAL) / 1000UL;
+
+    /* 48MHzクロックでのカウンタターゲット値計算 */
+    u4a_lin_counter_target = u4a_lin_timeout_us * 48UL - 1UL;
+
+    /* タイマー設定 */
+    LGPTimerLPF3_setInitialCounterTarget(xnl_lin_timer_handle, u4a_lin_counter_target, true);
+
+    /* ターゲット割り込み許可 */
+    LGPTimerLPF3_enableInterrupt(xnl_lin_timer_handle, LGPTimerLPF3_INT_TGT);
+
+    /* ワンショットモードで開始 */
+    LGPTimerLPF3_start(xnl_lin_timer_handle, LGPTimerLPF3_CTL_MODE_UP_ONCE);
+}
+
+/**
+ * @brief タイマークローズ
+ *
+ * @cond DETAIL
+ * @par 処理内容
+ *      - LGPTimerをクローズ
+ *      - ハンドルをNULLに設定
+ * @endcond
+ */
+void l_vog_lin_timer_close(void)
+{
+    if (xnl_lin_timer_handle != NULL)
+    {
+        LGPTimerLPF3_close(xnl_lin_timer_handle);
+        xnl_lin_timer_handle = NULL;
+    }
+}
+
 /***** End of File *****/

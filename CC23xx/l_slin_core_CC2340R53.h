@@ -62,8 +62,7 @@
 #define  U1G_LIN_SLSTS_SYNCHFIELD_WAIT      ((l_u8)2)       /* スレーブタスクのステータス = Synch Field待ち */
 #define  U1G_LIN_SLSTS_IDENTFIELD_WAIT      ((l_u8)3)       /* スレーブタスクのステータス = Ident Field待ち */
 #define  U1G_LIN_SLSTS_RCVDATA_WAIT         ((l_u8)4)       /* スレーブタスクのステータス = データ受信待ち */
-#define  U1G_LIN_SLSTS_BEFORE_SNDDATA_WAIT  ((l_u8)5)       /* スレーブタスクのステータス = データ送信待ち */
-#define  U1G_LIN_SLSTS_AFTER_SNDDATA_WAIT   ((l_u8)6)       /* スレーブタスクのステータス = データ送信後 */
+#define  U1G_LIN_SLSTS_SNDDATA_WAIT         ((l_u8)5)       /* スレーブタスクのステータス = データ送信待ち (H850互換) */
 
 #define  U1G_LIN_ERR_OFF                    ((l_u8)0)       /* 正常に転送完了 */
 #define  U1G_LIN_ERR_ON                     ((l_u8)1)       /* エラーありレスポンス完了 */
