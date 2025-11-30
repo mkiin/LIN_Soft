@@ -706,9 +706,9 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                     xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_RUN;          /* RUN状態へ移行 */
                     /* ヘッダタイムアウトタイマセット */
                     l_vog_lin_bit_tm_set( U1G_LIN_HEADER_MAX_TIME - U1G_LIN_BYTE_LENGTH );
-                    /* SynchBreak(IRQ待ち)状態に移行 */
-                    u1l_lin_slv_sts = U1G_LIN_SLSTS_BREAK_IRQ_WAIT;
-                    l_vog_lin_rx_dis();
+                    /* SynchField待ち状態に移行 (CC23xxではIRQピンなしのため直接遷移) */
+                    u1l_lin_slv_sts = U1G_LIN_SLSTS_SYNCHFIELD_WAIT;
+                    /* UART受信は有効のまま (IRQ待ちをスキップ) */
                 }
                 /* 受信データが00h以外ならば */
                 else
@@ -746,9 +746,9 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                 {
                     /* ヘッダタイムアウトタイマセット */
                     l_vog_lin_bit_tm_set( U1G_LIN_HEADER_MAX_TIME - U1G_LIN_BYTE_LENGTH );
-                    /* SynchBreak(IRQ待ち)状態に移行 */
-                    u1l_lin_slv_sts = U1G_LIN_SLSTS_BREAK_IRQ_WAIT;
-                    l_vog_lin_rx_dis();
+                    /* SynchField待ち状態に移行 (CC23xxではIRQピンなしのため直接遷移) */
+                    u1l_lin_slv_sts = U1G_LIN_SLSTS_SYNCHFIELD_WAIT;
+                    /* UART受信は有効のまま (IRQ待ちをスキップ) */
                 }
                 /* 受信データが00h以外ならば */
                 else
@@ -770,9 +770,12 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
             }
             break;
         /*** Synch Break(IRQ)待ち状態 ***/
-        case( U1G_LIN_SLSTS_BREAK_IRQ_WAIT ):
-            /* 何もしない */
-            break;
+        /* CC23xxではIRQピンが未接続のため、この状態は使用しない */
+        /* Break Delimiter検出のための外部IRQ割り込みが利用できないため、 */
+        /* Break検出後は直接SYNCHFIELD_WAITへ遷移する */
+        // case( U1G_LIN_SLSTS_BREAK_IRQ_WAIT ):
+        //     /* 何もしない */
+        //     break;
         /*** Synch Field待ち状態 ***/
         case( U1G_LIN_SLSTS_SYNCHFIELD_WAIT ):
             /* UARTエラーが発生した場合 */
