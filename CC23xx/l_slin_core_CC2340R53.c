@@ -1336,6 +1336,19 @@ static void  l_vol_lin_set_frm_complete(l_u8  u1a_lin_err)
         f_LIN_Manager_Callback_TxComplete( xnl_lin_id_sl.u1g_lin_slot, u1l_lin_frm_sz, u1l_lin_rs_tmp );
     }
 
+    /* ステータス管理フレーム送信完了時の自動クリア (LIN 2.0 Status Management) */
+    /* NM使用設定フレームで、送信フレームで、正常完了の場合 */
+    if( (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE) &&
+        (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND) &&
+        (u1a_lin_err == U1G_LIN_ERR_OFF) ) {
+
+        /* 全フレームのエラーフラグをクリア（LIN 2.0仕様: response_errorの自動クリア） */
+        l_u8 u1a_slot;
+        for( u1a_slot = U1G_LIN_0; u1a_slot < U1G_LIN_MAX_SLOT; u1a_slot++ ) {
+            xng_lin_frm_buf[ u1a_slot ].un_state.st_err.u2g_lin_err = U2G_LIN_BYTE_CLR;
+        }
+    }
+
     /* 送受信処理完了フラグのセット */
     if( xnl_lin_id_sl.u1g_lin_slot < U1G_LIN_16 ){
         xng_lin_sts_buf.un_rs_flg1.u2g_lin_word |= u2g_lin_flg_set_tbl[ xnl_lin_id_sl.u1g_lin_slot ];
