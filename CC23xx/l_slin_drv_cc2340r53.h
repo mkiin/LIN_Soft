@@ -33,6 +33,12 @@
 /* Physical Busエラー検出タイマ 設定値計算用 */
 #define  U2G_LIN_BUS_TIMEOUT        ( (l_u16)25000 )        /**< @brief  25000bit   型: u2 */
 
+/* パラメータ検証用定数 */
+#define  U1G_LIN_RSSP_MIN           ((l_u8)0)               /**< @brief Response Space 最小値 (0 bit)   型: l_u8 */
+#define  U1G_LIN_RSSP_MAX           ((l_u8)10)              /**< @brief Response Space 最大値 (10 bit)  型: l_u8 */
+#define  U1G_LIN_BTSP_MIN           ((l_u8)1)               /**< @brief Inter-byte Space 最小値 (1 bit) LIN 2.2a  型: l_u8 */
+#define  U1G_LIN_BTSP_MAX           ((l_u8)4)               /**< @brief Inter-byte Space 最大値 (4 bit)  型: l_u8 */
+
 /* 受信ステータスのエラーセット値 */
 #define  U1G_LIN_SOER_SET           ((l_u8)0x09)             /* オーバーランエラー */    
 #define  U1G_LIN_SFER_SET           ((l_u8)0x0a)             /* フレーミングエラー */

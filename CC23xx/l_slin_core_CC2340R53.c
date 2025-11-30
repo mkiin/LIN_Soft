@@ -1327,6 +1327,15 @@ static void  l_vol_lin_set_frm_complete(l_u8  u1a_lin_err)
     /* 保護IDのセット */
     xng_lin_bus_sts.st_bit.u2g_lin_last_id = (l_u16)u1g_lin_protid_tbl[ xnl_lin_id_sl.u1g_lin_id ];
 
+    /* 送信フレームの場合、LIN_Managerへコールバック通知 */
+    /* 継続フレーム送信時に送信完了フラグで誤検知している可能性があり、 */
+    /* 期待するフレームが送信されたかを確認するため、LIN通信管理へのコールバックを実行する */
+    if( (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND) &&
+        (u1a_lin_err == U1G_LIN_ERR_OFF) ) {
+        /* 送信成功時のみコールバック */
+        f_LIN_Manager_Callback_TxComplete( xnl_lin_id_sl.u1g_lin_slot, u1l_lin_frm_sz, u1l_lin_rs_tmp );
+    }
+
     /* 送受信処理完了フラグのセット */
     if( xnl_lin_id_sl.u1g_lin_slot < U1G_LIN_16 ){
         xng_lin_sts_buf.un_rs_flg1.u2g_lin_word |= u2g_lin_flg_set_tbl[ xnl_lin_id_sl.u1g_lin_slot ];
