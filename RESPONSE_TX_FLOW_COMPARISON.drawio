@@ -1,0 +1,433 @@
+<mxfile host="app.diagrams.net" modified="2025-01-22T00:00:00.000Z" agent="5.0" version="24.0.0" etag="drawio">
+  <diagram name="LIN Response TX Comparison" id="comparison">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="LINレスポンス送信処理フロー比較&#xa;F24 (LIN 2.x HW) vs H850 (LIN 1.3 SW) vs CC23xx (現状/修正後)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="2260" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ========== F24 Column ========== -->
+        <mxCell id="f24-header" value="F24 (LIN 2.x)&#xa;ハードウェアLINモジュール" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=16;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="360" height="1500" as="geometry" />
+        </mxCell>
+
+        <!-- F24 Flow -->
+        <mxCell id="f24-1" value="IDフィールド受信割り込み&#xa;l_vog_lin_rx_int()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="f24-1" target="f24-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-2" value="レスポンス送信開始&#xa;l_u1g_lin_resp_snd_start(&#xa;  size, sum_type, data[]&#xa;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="250" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="f24-2" target="f24-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-3" value="8バイト全データを&#xa;レジスタに設定&#xa;LDB1 = data[0]&#xa;LDB2 = data[1]&#xa;...&#xa;LDB8 = data[7]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="320" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="f24-3" target="f24-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-4" value="ハードウェア送信開始&#xa;LTRC = RTS&#xa;(Response TX Start)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="490" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="f24-4" target="f24-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-5" value="★ハードウェア自動処理★&#xa;&#xa;1. レスポンススペース挿入&#xa;   (LSC.RS設定値)&#xa;&#xa;2. データ送信 (1バイトずつ)&#xa;&#xa;3. インターバイトスペース挿入&#xa;   (LSC.IBS設定値)&#xa;&#xa;4. チェックサム計算・送信&#xa;&#xa;全て自動実行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="590" width="320" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="f24-5" target="f24-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-6" value="送信完了割り込み&#xa;l_vog_lin_tx_int()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="860" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-arrow-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="f24-6" target="f24-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-7" value="送信完了フラグ設定&#xa;l_vol_lin_set_frm_complete(&#xa;  U1G_LIN_ERR_OFF&#xa;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="950" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f24-note" value="特徴:&#xa;✓ 完全ハードウェア制御&#xa;✓ レスポンススペース自動&#xa;✓ インターバイトスペース自動&#xa;✓ ソフトウェア負荷最小&#xa;✓ リードバック不要" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1060" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ========== H850 Column ========== -->
+        <mxCell id="h850-header" value="H850 (LIN 1.3)&#xa;UARTソフトウェア実装 (正しい)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=16;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="440" y="100" width="360" height="1500" as="geometry" />
+        </mxCell>
+
+        <!-- H850 Flow -->
+        <mxCell id="h850-1" value="IDフィールド受信割り込み&#xa;l_vog_lin_rx_int()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="460" y="160" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-1" target="h850-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-2" value="データをtmpバッファにコピー&#xa;u1l_lin_rs_tmp[0..7] =&#xa;  frm_buf[0..7]&#xa;(l_slin_core_h83687.c:926-942)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="250" width="320" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-2" target="h850-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-3" value="★レスポンススペース待ち★&#xa;l_vog_lin_bit_tm_set(&#xa;  U1G_LIN_RSSP&#xa;)&#xa;タイマー設定: 1ビット&#xa;(l_slin_core_h83687.c:944)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="370" width="320" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-3" target="h850-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-4" value="状態遷移&#xa;u1l_lin_slv_sts =&#xa;  U1G_LIN_SLSTS_SNDDATA_WAIT&#xa;(l_slin_core_h83687.c:946)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="510" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-4" target="h850-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-5" value="タイマー割り込み (1回目)&#xa;l_vog_lin_tm_int()&#xa;case SNDDATA_WAIT:&#xa;(l_slin_core_h83687.c:1162)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="460" y="620" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-5" target="h850-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-6" value="1バイト目送信&#xa;(u1l_lin_rs_cnt = 0)&#xa;&#xa;- チェックサム累積計算&#xa;- l_vog_lin_tx_char(tmp[0])&#xa;  ★1バイト送信★&#xa;- タイマー設定:&#xa;  BYTE_LENGTH + BTSP&#xa;- カウンタ++&#xa;(l_slin_core_h83687.c:1211-1218)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="730" width="320" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-6" target="h850-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-7" value="タイマー割り込み (2回目以降)&#xa;l_vog_lin_tm_int()&#xa;★インターバイトスペース後★" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="460" y="920" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-7" target="h850-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-8" value="前回バイトのリードバック&#xa;l_u1g_lin_read_back(&#xa;  tmp[cnt-1]&#xa;)&#xa;★1バイトチェック★&#xa;(l_slin_core_h83687.c:1165)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="460" y="1020" width="320" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-8" target="h850-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-9" value="次の1バイト送信&#xa;&#xa;- チェックサム累積計算&#xa;- l_vog_lin_tx_char(tmp[cnt])&#xa;  ★1バイト送信★&#xa;- タイマー設定:&#xa;  BYTE_LENGTH + BTSP&#xa;- カウンタ++&#xa;&#xa;全バイト送信まで繰り返し&#xa;(l_slin_core_h83687.c:1184-1207)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1160" width="320" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;dashed=1;" edge="1" parent="1" source="h850-9" target="h850-7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="820" y="1245" />
+              <mxPoint x="820" y="955" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="h850-loop-label" value="ループ" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="820" y="1090" width="60" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-arrow-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h850-9" target="h850-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-10" value="送信完了&#xa;l_vol_lin_set_frm_complete(&#xa;  U1G_LIN_ERR_OFF&#xa;)&#xa;(l_slin_core_h83687.c:1179)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1360" width="320" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h850-note" value="特徴:&#xa;✓ ソフトウェア制御&#xa;✓ タイマー割り込み駆動&#xa;✓ 1バイトずつ送信&#xa;✓ 1バイトずつリードバック&#xa;✓ レスポンススペース実装&#xa;✓ インターバイトスペース実装" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1480" width="320" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ========== CC23xx Current Column ========== -->
+        <mxCell id="cc23xx-curr-header" value="CC23xx (現状)&#xa;UARTソフトウェア実装 (問題あり)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=16;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="840" y="100" width="360" height="1500" as="geometry" />
+        </mxCell>
+
+        <!-- CC23xx Current Flow -->
+        <mxCell id="cc23xx-curr-1" value="IDフィールド受信割り込み&#xa;l_vog_lin_rx_int()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="860" y="160" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-1" target="cc23xx-curr-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-2" value="データをtmpバッファにコピー&#xa;u1l_lin_rs_tmp[0..7] =&#xa;  frm_buf[0..7]&#xa;(l_slin_core_CC2340R53.c:1137-1152)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="860" y="250" width="320" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-2" target="cc23xx-curr-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-3" value="❌問題1: レスポンススペースなし❌&#xa;&#xa;即座に送信開始" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="860" y="370" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-3" target="cc23xx-curr-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-4" value="チェックサム計算&#xa;u1l_lin_rs_tmp[size] =&#xa;  checksum(...)&#xa;(l_slin_core_CC2340R53.c:1156)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="860" y="480" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-4" target="cc23xx-curr-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-5" value="❌問題2: 全バイト一括送信❌&#xa;&#xa;l_vog_lin_tx_char(&#xa;  u1l_lin_rs_tmp,  /* 配列 */&#xa;  size + 1          /* サイズ */&#xa;)&#xa;&#xa;★配列を渡して一括送信★&#xa;(l_slin_core_CC2340R53.c:1161)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="860" y="590" width="320" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-5" target="cc23xx-curr-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-6" value="❌問題3: インターバイトスペースなし❌&#xa;&#xa;全バイトが連続送信される" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="860" y="770" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-6" target="cc23xx-curr-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-7" value="状態遷移&#xa;u1l_lin_slv_sts =&#xa;  U1G_LIN_SLSTS_AFTER_SNDDATA_WAIT&#xa;(l_slin_core_CC2340R53.c:1163)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="860" y="880" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-7" target="cc23xx-curr-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-8" value="受信割り込み (データ送信後)&#xa;l_vog_lin_rx_int()&#xa;case AFTER_SNDDATA_WAIT:&#xa;(l_slin_core_CC2340R53.c:822)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="860" y="990" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-8" target="cc23xx-curr-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-9" value="❌問題4: 全バイト一括リードバック❌&#xa;&#xa;l_u1g_lin_read_back(&#xa;  u1l_lin_rs_tmp,  /* 配列 */&#xa;  size + 1          /* サイズ */&#xa;)&#xa;&#xa;★配列を渡して一括チェック★&#xa;★1バイトずつ確認できない★&#xa;(l_slin_core_CC2340R53.c:826)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="860" y="1100" width="320" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-arrow-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-curr-9" target="cc23xx-curr-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-10" value="送信完了&#xa;l_vol_lin_set_frm_complete()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="860" y="1300" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-curr-note" value="問題点:&#xa;❌ レスポンススペース未実装&#xa;❌ インターバイトスペース未実装&#xa;❌ 全バイト一括送信&#xa;❌ 全バイト一括リードバック&#xa;❌ タイマー割り込み駆動ではない&#xa;❌ 1バイトずつ制御できない" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=#b85450;align=left;verticalAlign=top;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="860" y="1390" width="320" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- ========== CC23xx Fixed Column ========== -->
+        <mxCell id="cc23xx-fix-header" value="CC23xx (修正後)&#xa;H850アーキテクチャに準拠" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=16;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="100" width="360" height="1500" as="geometry" />
+        </mxCell>
+
+        <!-- CC23xx Fixed Flow (Same as H850) -->
+        <mxCell id="cc23xx-fix-1" value="IDフィールド受信割り込み&#xa;l_vog_lin_rx_int()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="160" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-1" target="cc23xx-fix-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-2" value="データをtmpバッファにコピー&#xa;u1l_lin_rs_tmp[0..7] =&#xa;  frm_buf[0..7]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="250" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-2" target="cc23xx-fix-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-3" value="✓ レスポンススペース待ち&#xa;l_vog_lin_bit_tm_set(&#xa;  U1G_LIN_RSSP&#xa;)&#xa;タイマー設定: 1ビット&#xa;(LGPTimer使用)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a9d18e;strokeColor=#82b366;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="1260" y="360" width="320" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-3" target="cc23xx-fix-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-4" value="状態遷移&#xa;u1l_lin_slv_sts =&#xa;  U1G_LIN_SLSTS_SNDDATA_WAIT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="500" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-4" target="cc23xx-fix-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-5" value="タイマー割り込み (1回目)&#xa;l_vog_lin_tm_int()&#xa;case SNDDATA_WAIT:" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="600" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-5" target="cc23xx-fix-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-6" value="✓ 1バイト目送信&#xa;(u1l_lin_rs_cnt = 0)&#xa;&#xa;- チェックサム累積計算&#xa;- l_vog_lin_tx_char(tmp[0])&#xa;  ★1バイト送信★&#xa;- タイマー設定:&#xa;  BYTE_LENGTH + BTSP&#xa;- カウンタ++" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a9d18e;strokeColor=#82b366;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="1260" y="700" width="320" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-6" target="cc23xx-fix-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-7" value="タイマー割り込み (2回目以降)&#xa;l_vog_lin_tm_int()&#xa;✓ インターバイトスペース後" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="890" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-7" target="cc23xx-fix-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-8" value="✓ 前回バイトのリードバック&#xa;l_u1g_lin_read_back(&#xa;  tmp[cnt-1]  /* 1バイト */&#xa;)&#xa;★1バイトチェック★" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a9d18e;strokeColor=#82b366;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="1260" y="990" width="320" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-8" target="cc23xx-fix-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-9" value="✓ 次の1バイト送信&#xa;&#xa;- チェックサム累積計算&#xa;- l_vog_lin_tx_char(tmp[cnt])&#xa;  ★1バイト送信★&#xa;- タイマー設定:&#xa;  BYTE_LENGTH + BTSP&#xa;- カウンタ++&#xa;&#xa;全バイト送信まで繰り返し" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a9d18e;strokeColor=#82b366;fontStyle=1;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="1260" y="1130" width="320" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;dashed=1;" edge="1" parent="1" source="cc23xx-fix-9" target="cc23xx-fix-7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="1215" />
+              <mxPoint x="1620" y="925" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-loop-label" value="ループ" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1620" y="1060" width="60" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-arrow-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cc23xx-fix-9" target="cc23xx-fix-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-10" value="送信完了&#xa;l_vol_lin_set_frm_complete(&#xa;  U1G_LIN_ERR_OFF&#xa;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="1330" width="320" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cc23xx-fix-note" value="修正内容:&#xa;✓ レスポンススペース実装&#xa;✓ インターバイトスペース実装&#xa;✓ 1バイトずつ送信&#xa;✓ 1バイトずつリードバック&#xa;✓ タイマー割り込み駆動&#xa;✓ H850と同じアーキテクチャ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="1430" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="凡例" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="160" width="640" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-1" value="割り込みハンドラ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="200" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-2" value="通常処理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="250" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-3" value="重要処理 (スペース制御)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1680" y="300" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-4" value="問題箇所 (CC23xx現状)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1680" y="350" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-5" value="修正箇所 (CC23xx修正後)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a9d18e;strokeColor=#82b366;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1680" y="400" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Key Points -->
+        <mxCell id="keypoints" value="重要なポイント" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="490" width="640" height="380" as="geometry" />
+        </mxCell>
+
+        <mxCell id="keypoint-1" value="1. レスポンススペース&#xa;   - F24: ハードウェアが自動挿入 (LSC.RS設定)&#xa;   - H850: タイマーで1ビット待機&#xa;   - CC23xx修正後: LGPTimerで1ビット待機" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="530" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="keypoint-2" value="2. インターバイトスペース&#xa;   - F24: ハードウェアが自動挿入 (LSC.IBS設定)&#xa;   - H850: タイマーで10ビット(データ)+1ビット(スペース)&#xa;   - CC23xx修正後: LGPTimerで10ビット+1ビット" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="600" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="keypoint-3" value="3. 送信方法&#xa;   - F24: 8バイト一括 (ハードウェアが自動送信)&#xa;   - H850: 1バイトずつ (タイマー割り込み駆動)&#xa;   - CC23xx現状: 全バイト一括 (❌問題)&#xa;   - CC23xx修正後: 1バイトずつ (タイマー割り込み駆動)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="670" width="600" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="keypoint-4" value="4. リードバック&#xa;   - F24: 不要 (ハードウェア制御のため)&#xa;   - H850: 1バイトずつ確認&#xa;   - CC23xx現状: 全バイト一括確認 (❌問題)&#xa;   - CC23xx修正後: 1バイトずつ確認" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="750" width="600" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="keypoint-5" value="5. タイマー制御&#xa;   - F24: 不要 (ハードウェアが全て自動)&#xa;   - H850: Timer Z0 (16ビット、φ/8分周)&#xa;   - CC23xx修正後: LGPTimer (16/24/32ビット、48MHz)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="830" width="600" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Code References -->
+        <mxCell id="code-ref" value="コード参照箇所" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1660" y="900" width="640" height="680" as="geometry" />
+        </mxCell>
+
+        <mxCell id="code-ref-f24" value="F24:&#xa;- l_slin_drv_rl78f24.c:619-660 (レスポンス送信開始)&#xa;- l_slin_core_rl78f24.c:1036-1038 (送信開始呼び出し)&#xa;- l_slin_core_rl78f24.c:1069-1099 (送信完了割り込み)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="940" width="600" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="code-ref-h850" value="H850:&#xa;- l_slin_core_h83687.c:900-946 (IDフィールド受信処理)&#xa;- l_slin_core_h83687.c:944 (レスポンススペース設定)&#xa;- l_slin_core_h83687.c:1162-1219 (送信処理ループ)&#xa;- l_slin_core_h83687.c:1165 (リードバック)&#xa;- l_slin_core_h83687.c:1204,1215 (1バイト送信)&#xa;- l_slin_core_h83687.c:1205,1216 (インターバイトスペース)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="1010" width="600" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="code-ref-cc23xx-curr" value="CC23xx (現状):&#xa;- l_slin_core_CC2340R53.c:1117-1165 (IDフィールド受信処理)&#xa;- l_slin_core_CC2340R53.c:1161 (全バイト一括送信 ❌)&#xa;- l_slin_core_CC2340R53.c:822-841 (データ送信後処理)&#xa;- l_slin_core_CC2340R53.c:826 (全バイト一括リードバック ❌)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="1120" width="600" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="code-ref-cc23xx-fix" value="CC23xx (修正後):&#xa;IDフィールド受信処理:&#xa;  - データをtmpバッファにコピー&#xa;  - l_vog_lin_bit_tm_set(U1G_LIN_RSSP)  // レスポンススペース&#xa;  - u1l_lin_slv_sts = SNDDATA_WAIT  // 状態遷移&#xa;&#xa;タイマー割り込みハンドラ (l_vog_lin_tm_int):&#xa;  case SNDDATA_WAIT:&#xa;    // 2バイト目以降&#xa;    if (u1l_lin_rs_cnt > 0) {&#xa;      if (l_u1g_lin_read_back(tmp[cnt-1]) != OK) {  // 1バイトリードバック&#xa;        // BITエラー処理&#xa;      }&#xa;    }&#xa;    &#xa;    // 送信完了チェック&#xa;    if (u1l_lin_rs_cnt > u1l_lin_frm_sz) {&#xa;      l_vol_lin_set_frm_complete(ERR_OFF);&#xa;      return;&#xa;    }&#xa;    &#xa;    // チェックサム計算 (データバイトのみ)&#xa;    if (u1l_lin_rs_cnt < u1l_lin_frm_sz) {&#xa;      u2l_lin_chksum += tmp[cnt];&#xa;    } else {&#xa;      tmp[size] = ~((uint8_t)u2l_lin_chksum);&#xa;    }&#xa;    &#xa;    // 1バイト送信&#xa;    l_vog_lin_tx_char(tmp[u1l_lin_rs_cnt]);  // ★1バイト★&#xa;    &#xa;    // インターバイトスペース設定&#xa;    l_vog_lin_bit_tm_set(BYTE_LENGTH + BTSP);&#xa;    &#xa;    u1l_lin_rs_cnt++;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="1210" width="600" height="360" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
