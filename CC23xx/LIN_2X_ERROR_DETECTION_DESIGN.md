@@ -10,15 +10,15 @@ CC23xxのLIN実装にLIN 2.xで要求されるエラー検出機能を追加す�
 
 ## LIN 2.xで要求されるエラー種別
 
-LIN_1.3_vs_2.x_COMPARISON.mdから抽出した未実装エラー：
+LIN_1.3_vs_2.x_COMPARISON.mdから抽出した実装エラー：
 
 | エラー種類 | 検出方法 | 優先度 | 実装状況 |
 |-----------|---------|-------|---------|
 | **No Response** | タイムアウト検出 | 高 | ✅ 実装済み |
 | **BIT Error** | リードバック比較 | 高 | ✅ 実装済み |
 | **Header Timeout** | タイムアウト検出 | 高 | ✅ 実装済み |
-| **Physical Bus Error** | Header Timeoutカウンタ（3回連続） | 中 | ✅ 実装済み |
-| **Response Too Short** | タイムアウト + バイトカウント | 中 | ⚠️ 部分実装 |
+| **Physical Bus Error** | Header Timeoutカウンタ（510回連続） | 中 | ✅ 実装済み |
+| **Response Too Short** | タイムアウト + バイトカウント | 中 | ✅ 実装済み |
 
 ---
 
@@ -202,18 +202,18 @@ if( u1l_lin_rs_cnt > U1G_LIN_0 ){
 
 ---
 
-### 5. Response Too Short Error ⚠️ 部分実装
+### 5. Response Too Short Error ✅ 実装済み
 
 **検出方法（LIN 2.x仕様）:**
 - レスポンス受信タイムアウト発生時に、受信バイト数をチェック
 - 1バイト目（Data Field 1）を受信している場合 → **Response Too Short**
 - 1バイト目も受信していない場合 → **No Response**
 
-**現状の実装:**
-- CC23xx: RCVDATA_WAIT状態でのタイムアウトは全て **No Response** として処理
-- H850: 同じ実装（バイトカウントによる区別なし）
+**実装状況:**
+- ✅ CC23xx: バイトカウンタ（`u1l_lin_rs_cnt`）によるエラー区別を実装
+- H850: バイトカウントによる区別なし（LIN 1.3準拠）
 
-**F24の実装:**
+**F24の実装（参考）:**
 [F24/l_slin_drv_rl78f24.c:824-853](../F24/l_slin_drv_rl78f24.c#L824-L853)
 ```c
 void l_vog_lin_determine_ResTooShort_or_NoRes(l_u8 u1a_lst_d1rc_state)
@@ -239,9 +239,9 @@ void l_vog_lin_determine_ResTooShort_or_NoRes(l_u8 u1a_lst_d1rc_state)
 - ハードウェアの`D1RC`フラグ（Data 1 Receive Complete）を利用
 - タイムアウト発生時にこのフラグを確認してエラー種別を決定
 
-**CC23xxでの実装方法:**
+**CC23xxでの実装（✅ 実装済み）:**
 
-**方法1: バイトカウンタによる判定（推奨）**
+**実装箇所:** [l_slin_core_CC2340R53.c:1168-1188](l_slin_core_CC2340R53.c#L1168-L1188)
 ```c
 case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
     if( (xnl_lin_id_sl.u1g_lin_id == U1G_LIN_SLEEP_ID) &&
@@ -249,13 +249,13 @@ case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
         l_vol_lin_set_synchbreak();
     }
     else{
-        /* 1バイト目を受信済みかチェック */
-        if( u1l_lin_rs_cnt > 0 ){
-            /* Response Too Short エラー */
+        /* 1バイト目を受信済みかチェック (LIN 2.x Response Too Short検出) */
+        if( u1l_lin_rs_cnt > U1G_LIN_0 ){
+            /* Response Too Short エラー (1バイト目受信後、残りのバイトが受信できなかった) */
             xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_tooshort = U2G_LIN_BIT_SET;
         }
         else{
-            /* No Response エラー */
+            /* No Responseエラー (1バイト目すら受信できなかった) */
             xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_nores = U2G_LIN_BIT_SET;
         }
 
@@ -265,15 +265,11 @@ case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
     break;
 ```
 
-**必要な変更:**
-1. `u2g_lin_e_tooshort` フラグの追加（ヘッダーファイル）
-2. タイマー割り込みハンドラでのバイトカウント判定
+**実装内容:**
+1. ✅ `u2g_lin_e_tooshort` フラグの追加（[l_slin_tbl.h:164,330](l_slin_tbl.h#L164)）
+2. ✅ タイマー割り込みハンドラでのバイトカウント判定実装
 
-**優先度評価:**
-- LIN 2.x規格では、Response Too ShortとNo Responseは別エラー
-- しかし、エラーハンドリングは同じ（フレーム破棄、再送要求など）
-- H850でも未実装（No Responseのみ）
-- **優先度: 中** （現状のNo Response検出で機能的には問題なし）
+**実装の詳細:** [RESPONSE_TOO_SHORT_IMPLEMENTATION.md](RESPONSE_TOO_SHORT_IMPLEMENTATION.md)
 
 ---
 
@@ -355,7 +351,7 @@ l_vog_lin_bus_tm_set();
 | **Physical Bus Error** | 中 | ✅ 完了 | l_vog_lin_tm_int, case BREAK_UART_WAIT | ✅ 完全互換 |
 | **No Response** | 高 | ✅ 完了 | l_vog_lin_tm_int, case RCVDATA_WAIT | ✅ 完全互換 |
 | **BIT Error** | 高 | ✅ 完了 | l_vog_lin_tm_int, case SNDDATA_WAIT | ✅ 完全互換 |
-| **Response Too Short** | 中 | ⚠️ 未実装 | - | ⚠️ H850も未実装 |
+| **Response Too Short** | 中 | ✅ 完了 | l_vog_lin_tm_int, case RCVDATA_WAIT | ⚠️ H850未実装（拡張機能） |
 
 ---
 
@@ -389,45 +385,51 @@ l_vog_lin_bus_tm_set();
 
 ---
 
-## 将来の拡張: Response Too Short実装案
+## Response Too Short実装（✅ 実装完了）
 
-### 設計案
+### 実装内容
 
-#### 1. エラーフラグの追加
+#### 1. エラーフラグの追加（✅ 完了）
 
-**l_slin_api.h（またはl_slin_def.h）:**
+**l_slin_tbl.h:**
 ```c
-/* Response Too Shortエラーフラグ定義 */
-#define U2G_LIN_E_TOOSHORT      ((l_u16)0x0400)  /* bit10 */
+/* リトルエンディアン（158-167行目） */
+struct {
+    l_u16   u2g_lin_chksum:8;
+    l_u16   u2g_lin_e_nores:1;
+    l_u16   u2g_lin_e_uart:1;
+    l_u16   u2g_lin_e_bit:1;
+    l_u16   u2g_lin_e_sum:1;
+    l_u16   u2g_lin_e_tooshort:1;  /* Response Too Short エラー (LIN 2.x) */
+    l_u16   reserve:2;
+    l_u16   u2g_lin_no_use:1;
+} st_bit;
+
+/* ビッグエンディアン（327-336行目） */
+struct {
+    l_u16   u2g_lin_no_use:1;
+    l_u16   reserve:2;
+    l_u16   u2g_lin_e_tooshort:1;  /* Response Too Short エラー (LIN 2.x) */
+    l_u16   u2g_lin_e_sum:1;
+    l_u16   u2g_lin_e_bit:1;
+    l_u16   u2g_lin_e_uart:1;
+    l_u16   u2g_lin_e_nores:1;
+    l_u16   u2g_lin_chksum:8;
+} st_bit;
 ```
 
-**un_lin_sts_buf構造体の拡張:**
-```c
-typedef union {
-    struct {
-        // ...existing fields...
-        l_u16 u2g_lin_e_tooshort  : 1;  /* Response Too Shortエラー */
-        // ...
-    } st_bit;
-    l_u16 u2g_lin_word;
-} un_lin_sts_buf;
-```
+#### 2. タイマー割り込みハンドラの修正（✅ 完了）
 
-#### 2. タイマー割り込みハンドラの修正
-
-**l_slin_core_CC2340R53.c: l_vog_lin_tm_int()**
+**l_slin_core_CC2340R53.c: l_vog_lin_tm_int()（1168-1188行目）**
 ```c
 case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
-    /* SLEEPコマンドIDで、フレーム定義なしの場合 */
     if( (xnl_lin_id_sl.u1g_lin_id == U1G_LIN_SLEEP_ID) &&
         (xnl_lin_id_sl.u1g_lin_slot == U1G_LIN_NO_FRAME) ){
-        /* 何もせず Synch Break待ち状態へ */
         l_vol_lin_set_synchbreak();
     }
     else{
-        #ifdef U1G_LIN_SUPPORT_RESPONSE_TOO_SHORT
-        /* 1バイト目を受信済みかチェック */
-        if( u1l_lin_rs_cnt > 0 ){
+        /* 1バイト目を受信済みかチェック (LIN 2.x Response Too Short検出) */
+        if( u1l_lin_rs_cnt > U1G_LIN_0 ){
             /* Response Too Short エラー */
             xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_tooshort = U2G_LIN_BIT_SET;
         }
@@ -435,10 +437,6 @@ case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
             /* No Response エラー */
             xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_nores = U2G_LIN_BIT_SET;
         }
-        #else
-        /* H850互換: Response Too Shortを区別せず、全てNo Responseとする */
-        xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_nores = U2G_LIN_BIT_SET;
-        #endif
 
         l_vol_lin_set_frm_complete( U1G_LIN_ERR_ON );
         l_vol_lin_set_synchbreak();
@@ -446,14 +444,7 @@ case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
     break;
 ```
 
-#### 3. コンパイルスイッチの追加
-
-**l_slin_def.h:**
-```c
-/* Response Too Short検出機能の有効化 (LIN 2.x互換) */
-/* H850互換性を維持する場合は未定義のままにする */
-// #define U1G_LIN_SUPPORT_RESPONSE_TOO_SHORT
-```
+**詳細ドキュメント:** [RESPONSE_TOO_SHORT_IMPLEMENTATION.md](RESPONSE_TOO_SHORT_IMPLEMENTATION.md)
 
 ---
 
@@ -516,7 +507,7 @@ case ( U1G_LIN_SLSTS_RCVDATA_WAIT ):
 ## 結論
 
 ### 実装状況
-CC23xxのLIN実装には、**LIN 2.xで要求される高優先度エラー検出機能がすべて実装済み**です。
+CC23xxのLIN実装には、**LIN 2.xで要求されるすべてのエラー検出機能が実装済み**です。
 
 | 機能 | 状態 |
 |-----|------|
@@ -524,22 +515,17 @@ CC23xxのLIN実装には、**LIN 2.xで要求される高優先度エラー検�
 | Physical Bus Error | ✅ H850完全互換で実装済み |
 | No Response | ✅ H850完全互換で実装済み |
 | BIT Error | ✅ H850完全互換で実装済み |
-| Response Too Short | ⚠️ H850と同様に未実装（将来拡張可） |
+| Response Too Short | ✅ LIN 2.x拡張機能として実装済み |
 
-### 追加作業不要
-- 現状の実装で**LIN 2.xの主要エラー検出要件を満たしている**
-- H850アーキテクチャとの完全互換性を維持
+### 実装完了
+- **LIN 2.xのすべてのエラー検出要件を満たしている** ✅
+- H850アーキテクチャとの互換性を維持（Response Too Shortは拡張機能）
 - タイマー駆動による高精度なタイムアウト検出
 - ステートマシンによる排他的なタイマー使用
-
-### 将来の拡張
-Response Too Short検出が必要になった場合：
-1. コンパイルスイッチで有効化
-2. バイトカウンタ判定を追加
-3. エラーフラグ定義を拡張
+- バイトカウンタ判定によるResponse Too Short / No Response区別
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Last Updated:** 2025-12-01
-**Status:** ✅ 実装完了確認済み
+**Status:** ✅ 全機能実装完了（Response Too Short含む）

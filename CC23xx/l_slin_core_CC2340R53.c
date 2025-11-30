@@ -1172,8 +1172,15 @@ void  l_vog_lin_tm_int(void)
                 l_vol_lin_set_synchbreak();                                                 /* Synch Break受信待ち設定 */
             }
             else{
-                /* No Responseエラー */
-                xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_nores = U2G_LIN_BIT_SET;
+                /* 1バイト目を受信済みかチェック (LIN 2.x Response Too Short検出) */
+                if( u1l_lin_rs_cnt > U1G_LIN_0 ){
+                    /* Response Too Short エラー (1バイト目受信後、残りのバイトが受信できなかった) */
+                    xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_tooshort = U2G_LIN_BIT_SET;
+                }
+                else{
+                    /* No Responseエラー (1バイト目すら受信できなかった) */
+                    xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_nores = U2G_LIN_BIT_SET;
+                }
 
                 l_vol_lin_set_frm_complete( U1G_LIN_ERR_ON );                               /* エラーありレスポンス完了 */
                 l_vol_lin_set_synchbreak();                                                 /* Synch Break受信待ち設定 */

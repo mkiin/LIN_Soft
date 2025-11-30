@@ -161,7 +161,8 @@ typedef struct {
             l_u16   u2g_lin_e_uart:1;
             l_u16   u2g_lin_e_bit:1;
             l_u16   u2g_lin_e_sum:1;
-            l_u16   reserve:3;
+            l_u16   u2g_lin_e_tooshort:1;  /* Response Too Short エラー (LIN 2.x) */
+            l_u16   reserve:2;
             l_u16   u2g_lin_no_use:1;
         } st_bit;
     } un_state;
@@ -325,7 +326,8 @@ typedef struct {
         } st_err;
         struct {
             l_u16   u2g_lin_no_use:1;
-            l_u16   reserve:3;
+            l_u16   reserve:2;
+            l_u16   u2g_lin_e_tooshort:1;  /* Response Too Short エラー (LIN 2.x) */
             l_u16   u2g_lin_e_sum:1;
             l_u16   u2g_lin_e_bit:1;
             l_u16   u2g_lin_e_uart:1;
