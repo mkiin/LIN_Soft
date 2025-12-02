@@ -788,6 +788,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                 else
                 {
                     u1l_lin_slv_sts = U1G_LIN_SLSTS_IDENTFIELD_WAIT;                    /* Ident Field待ち状態 */
+                    l_vog_lin_rx_enb();                                                  /* 次のバイト(Ident Field)受信開始 */
                 }
             }
             break;
@@ -838,6 +839,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                         l_vog_lin_rcv_tm_set( (l_u8)((u1l_lin_frm_sz + U1G_LIN_1) * U1G_LIN_BYTE_LENGTH) );
 
                         u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;                   /* データ受信待ち状態 */
+                        l_vog_lin_rx_enb();                                             /* 次のバイト(データ)受信開始 */
                     }
                     /* SLEEPコマンド以外の場合 */
                     else
@@ -867,6 +869,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                                 l_vog_lin_rcv_tm_set( (l_u8)((u1l_lin_frm_sz + U1G_LIN_1) * U1G_LIN_BYTE_LENGTH) );
 
                                 u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;           /* データ受信待ち状態 */
+                                l_vog_lin_rx_enb();                                     /* 次のバイト(データ)受信開始 */
                             }
                             /*-- [送信フレーム時] --*/
                             else if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND )
@@ -954,6 +957,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                     u1l_lin_rs_cnt++;
                     u2l_lin_chksum += (l_u16)u1a_lin_data;
                     u2l_lin_chksum = ( u2l_lin_chksum & U2G_LIN_MASK_FF ) + ( (u2l_lin_chksum >> U2G_LIN_8) & U2G_LIN_MASK_FF );
+                    l_vog_lin_rx_enb();                                                  /* 次のバイト受信開始 */
                 }
                 /* チェックサム部の受信割り込み処理 */
                 else
