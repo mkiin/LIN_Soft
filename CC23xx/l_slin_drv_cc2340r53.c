@@ -442,7 +442,6 @@ void  l_vog_lin_int_enb(void)
 
     GPIO_setInterruptConfig( U1G_LIN_INTPIN, GPIO_CFG_IN_INT_RISING);   /* 立ち上がりエッジを検知 */
     GPIO_enableInt( U1G_LIN_INTPIN );                                     /* INT割り込み許可 */
-    GPIO_disableInt( U1G_LIN_INTPIN );
 
     l_vog_lin_irq_res();                                                         /* 割り込み設定復元 */
 }
@@ -471,7 +470,6 @@ void  l_vog_lin_int_enb_wakeup(void)
 
     GPIO_setInterruptConfig( U1G_LIN_INTPIN, GPIO_CFG_IN_INT_RISING); /* 立ち下がりエッジを検知 */
     GPIO_enableInt( U1G_LIN_INTPIN );                                    /* INT割り込み許可 */
-    GPIO_disableInt( U1G_LIN_INTPIN );
 
     l_vog_lin_irq_res();                                                        /* 割り込み設定復元 */
 }
