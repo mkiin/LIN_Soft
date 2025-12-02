@@ -1,4 +1,10 @@
 # CLAUDE.md
+
+## ドキュメント置き場
+
+- ドキュメントの形式はマークダウン形式であること
+- ドキュメントの置き場はプロジェクトディレクトリ直下のdocsに **必ず置くこと**
+
 UART0のレジスタガイド:
 /home/yaruha/project-dev/else-dev/LIN_Workspace/TI/docs/driverlib/driverlib/register_descriptions/CPU_MMAP/UART0.html
 

@@ -11,7 +11,6 @@
 
 /***** ヘッダ インクルード *****/
 #include <ti/drivers/GPIO.h>
-#include <stdio.h>
 #include "ti_drivers_config.h"
 #include "l_slin_cmn.h"
 #include "l_slin_def.h"
@@ -44,7 +43,7 @@ void   l_slot_set_default_ch1(l_frame_handle u1a_lin_frm);
 void   l_slot_set_fail_ch1(l_frame_handle  u1a_lin_frm);
 l_u8   l_vog_lin_check_header( l_u8 u1a_lin_data[] ,l_u8 u1a_lin_err );
 /*-- 関数定義(extern) --*/
-void   l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err);  /* H850互換: 1バイト受信 */
+void   l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err);
 void   l_vog_lin_tm_int(void);
 void   l_vog_lin_irq_int(void);
 void   l_vog_lin_set_nm_info(l_u8  u1a_lin_nm_info);
@@ -62,8 +61,8 @@ static l_u8   u1l_lin_slv_sts;                                 /* スレーブ�
 static l_u8   u1l_lin_frm_sz;                                  /* データサイズ */
 static l_u8   u1l_lin_rs_cnt;                                  /* 送受信データカウンタ */
 static l_u8   u1l_lin_rs_tmp[ U1G_LIN_DATA_SUM_LEN ];          /* 送受信データ用tmpバッファ(Data + Checksum) 9バイト */
-static l_u8   u1l_lin_chksum;                                  /* チェックサム格納 (受信用) */
-static l_u16  u2l_lin_chksum;                                  /* チェックサム演算用変数 (送信用、H850互換) */
+static l_u8   u1l_lin_chksum;                                  /* チェックサム格納 */
+static l_u16  u2l_lin_chksum;                                   /* チェックサム格納 */
 static l_u16  u2l_lin_herr_cnt;                                /* ヘッダタイムアウトエラー回数カウンタ（Physical Busエラー検出用） */
 
 extern l_u8   u1l_lin_rx_buf[U4L_LIN_UART_MAX_READSIZE];       /**< @brief 受信バッファ */
@@ -156,7 +155,7 @@ void  l_ifc_init_drv_ch1(void)
     /*** UARTの初期化 ***/
     l_vog_lin_uart_init();
 
-    /*** タイマーの初期化 ***/
+    /*** Timerの初期化 ***/
     l_vog_lin_timer_init();
 
     /*** 外部INTの初期化 ***/
@@ -230,6 +229,8 @@ l_bool  l_ifc_disconnect_ch1(void)
     /* SLEEP状態の場合 */
     if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_SLEEP )
     {
+        /* タイマの停止 */
+        l_vog_lin_frm_tm_stop();
         xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_RESET;
       /* UARTによるWAKEUP検出の場合 */
       #if U1G_LIN_WAKEUP == U1G_LIN_WP_UART_USE
@@ -265,21 +266,15 @@ l_bool  l_ifc_disconnect_ch1(void)
 /**************************************************/
 void  l_ifc_wake_up_ch1(void)
 {
-    l_u16 u2a_lin_sts;
-    l_u8 u1a_lin_wakeup_data;
-    l_u1g_lin_irq_dis();                                        /* 割り込み禁止設定 */
-    u1a_lin_wakeup_data = U1G_LIN_SND_WAKEUP_DATA;
-    u2a_lin_sts = xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts;
-    
-    l_vog_lin_irq_res();                                    /* 割り込み設定復元 */
-
     /* RUN STANDBY状態の場合 */
-    if( u2a_lin_sts == U2G_LIN_STS_RUN_STANDBY ){
+    if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_RUN_STANDBY ){
+        // l_u1g_lin_irq_dis();                                    /* 割り込み禁止設定 */
         /* wakeupパルスを送信 */
-        l_vog_lin_tx_char( &u1a_lin_wakeup_data,U1G_LIN_DL_1 );
+        l_vog_lin_tx_char( U1G_LIN_SND_WAKEUP_DATA);
+        // l_vog_lin_irq_res();                                    /* 割り込み設定復元 */
     }
     /* SLEEP状態場合 */
-    else if(u2a_lin_sts == U2G_LIN_STS_SLEEP){
+    else if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_SLEEP){
       /* UARTによるWAKEUP検出の場合 */
       #if U1G_LIN_WAKEUP == U1G_LIN_WP_UART_USE
         l_vog_lin_rx_dis();                                     /* 受信割り込みを禁止する */
@@ -288,11 +283,13 @@ void  l_ifc_wake_up_ch1(void)
         l_vog_lin_int_dis();                                    /* INT割り込みを禁止する */
       #endif
         /* wakeupパルスを送信 */
-        l_vog_lin_tx_char( &u1a_lin_wakeup_data ,U1G_LIN_DL_1);
+        l_vog_lin_tx_char( U1G_LIN_SND_WAKEUP_DATA);
+        l_vog_lin_bit_tm_set( U1G_LIN_BYTE_LENGTH );
     }
     /* RUN STANDBY / SLEEP状態以外の場合 */
     else{
-        /* なにもしない */
+        // l_u1g_lin_irq_dis();                                    /* 割り込み禁止設定 */
+        // l_vog_lin_irq_res();                                    /* 割り込み設定復元 */6
     }
 /* Ver 2.10 変更（管理番号15）:Wakeupパルス送信後、立下りエッジで検出した時のWakeupパルス送信中断対策 */
 }
@@ -333,6 +330,8 @@ void  l_ifc_sleep_ch1(void)
     if( (xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_RUN)
      || (xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_RUN_STANDBY) ){
 
+        l_vog_lin_frm_tm_stop();                                            /* タイマ停止 */
+        
         /* SLEEPへ移行 */ 
         xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_SLEEP;    /* SLEEP状態に移行 */
         l_vol_lin_set_wakeup();                                             /* Wakeup待機設定 */
@@ -643,18 +642,14 @@ void  l_slot_set_fail_ch1(l_frame_handle  u1a_lin_frm)
 /**************************************************/
 void  l_ifc_run_ch1(void)
 {
-    l_u16 u2a_lin_sts;
-    
-    l_u1g_lin_irq_dis();                                /* 割り込み禁止設定 */
-    u2a_lin_sts = xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts;
-    l_vog_lin_irq_res();                                /* 割り込み設定復元 */
-
     /* SLEEP状態の場合 */
-    if( u2a_lin_sts == U2G_LIN_STS_SLEEP )
+    if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_SLEEP )
     {
-        l_u1g_lin_irq_dis();                            /* 割り込み禁止設定 */
+        l_u1g_lin_irq_dis();
+        
         /* RUN STANDBY状態へ移行 */
         xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_RUN_STANDBY;
+        
         l_vog_lin_irq_res();                            /* 割り込み設定復元 */
 
         l_ifc_init_drv_ch1();                           /* ドライバ部の初期化 */
@@ -662,6 +657,8 @@ void  l_ifc_run_ch1(void)
     }
     else
     {
+        l_u1g_lin_irq_dis(); 
+        l_vog_lin_irq_res();                                /* 割り込み設定復元 */
     }
 }
 
@@ -670,13 +667,6 @@ void  l_ifc_run_ch1(void)
 /*  受信割り込み発生                              */
 /*------------------------------------------------*/
 /*  引数： data : 受信データ                      */
-/*         err  : 受信エラーフラグ                */
-/*  戻値： なし                                   */
-/**************************************************/
-/**************************************************/
-/*  受信割り込み発生 (H850互換実装)               */
-/*------------------------------------------------*/
-/*  引数： data : 受信データ (1バイト)            */
 /*         err  : 受信エラーフラグ                */
 /*  戻値： なし                                   */
 /**************************************************/
@@ -747,7 +737,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                     /* ヘッダタイムアウトタイマセット */
                     l_vog_lin_bit_tm_set( U1G_LIN_HEADER_MAX_TIME - U1G_LIN_BYTE_LENGTH );
                     /* SynchField待ち状態に移行 (CC23xxではIRQピンなしのため直接遷移) */
-                    u1l_lin_slv_sts = U1G_LIN_SLSTS_SYNCHFIELD_WAIT;
+                    u1l_lin_slv_sts = U1G_LIN_SLSTS_BREAK_IRQ_WAIT;
                     /* UART受信は有効のまま (IRQ待ちをスキップ) */
                 }
                 /* 受信データが00h以外ならば */
@@ -770,12 +760,9 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
             }
             break;
         /*** Synch Break(IRQ)待ち状態 ***/
-        /* CC23xxではIRQピンが未接続のため、この状態は使用しない */
-        /* Break Delimiter検出のための外部IRQ割り込みが利用できないため、 */
-        /* Break検出後は直接SYNCHFIELD_WAITへ遷移する */
-        // case( U1G_LIN_SLSTS_BREAK_IRQ_WAIT ):
-        //     /* 何もしない */
-        //     break;
+        case( U1G_LIN_SLSTS_BREAK_IRQ_WAIT ):
+            /* 何もしない */
+            break;
         /*** Synch Field待ち状態 ***/
         case( U1G_LIN_SLSTS_SYNCHFIELD_WAIT ):
             /* UARTエラーが発生した場合 */
@@ -971,9 +958,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                 /* チェックサム部の受信割り込み処理 */
                 else
                 {
-
                     u2l_lin_chksum = ~u2l_lin_chksum;                                   /* チェックサム反転 */
-
                     /* チェックサムエラー発生の場合 */
                     if( (l_u8)u2l_lin_chksum != u1a_lin_data )
                     {
@@ -987,9 +972,7 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
                         else
                         {
                             xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_e_sum = U2G_LIN_BIT_SET;
-
                             l_vol_lin_set_frm_complete( U1G_LIN_ERR_ON );               /* エラーありレスポンス完了 */
-
                             l_vol_lin_set_synchbreak();                                 /* Synch Break受信待ち設定 */
                         }
                     }
@@ -1098,35 +1081,12 @@ void  l_vog_lin_rx_int(l_u8 u1a_lin_data, l_u8 u1a_lin_err)
 
 
 /**************************************************/
-/*  外部INT割り込み発生                           */
-/*------------------------------------------------*/
-/*  引数： なし                                   */
-/*  戻値： なし                                   */
-/**************************************************/
-void  l_vog_lin_irq_int(void)
-{
-    /*** SLEEP状態の場合 ***/
-    if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_SLEEP )
-    {
-        /* RUN STANDBY状態へ移行 */
-        xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_RUN_STANDBY;
-        l_ifc_init_drv_ch1();                                                   /* ドライバ部の初期化 */
-    }
-    /*** RUN STANDBY,RUN状態状態の場合 ***/
-    else
-    {
-        l_vog_lin_int_dis();                                                    /* INT割り込みを禁止する */
-    }
-}
-
-
-/**************************************************/
 /*  タイマ割り込み発生                            */
 /*------------------------------------------------*/
 /*  引数： なし                                   */
 /*  戻値： なし                                   */
 /**************************************************/
-void  l_vog_lin_tm_int(void)
+void l_vog_lin_tm_int(void)
 {
     l_u8  l_u1a_lin_read_back;
 
@@ -1265,6 +1225,63 @@ void  l_vog_lin_tm_int(void)
 
 
 /**************************************************/
+/*  外部INT割り込み発生                           */
+/*------------------------------------------------*/
+/*  引数： なし                                   */
+/*  戻値： なし                                   */
+/**************************************************/
+void  l_vog_lin_irq_int(void)
+{
+    /*** SLEEP状態の場合 ***/
+    if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_SLEEP )
+    {
+        /* RUN STANDBY状態へ移行 */
+        xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts = U2G_LIN_STS_RUN_STANDBY;
+        l_ifc_init_drv_ch1();                                                   /* ドライバ部の初期化 */
+    }
+    /*** RUN STANDBY,RUN状態状態の場合 ***/
+    else if ( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_RUN_STANDBY )
+    {
+        /*** Synch Break(UART)待ち状態 ***/
+        if ( u1l_lin_slv_sts == U1G_LIN_SLSTS_BREAK_IRQ_WAIT )
+        {
+            /* このタイミングのIRQ割り込みは無視する */
+        }
+        /*** Synch Break(UART)待ち状態以外 ***/
+        else
+        {
+            /* 通常発生しないが、フェール処理を実施 */
+            l_vol_lin_set_synchbreak();
+        }
+    }
+    /*** RUN状態の場合 ***/
+    else if( xng_lin_sts_buf.un_state.st_bit.u2g_lin_sts == U2G_LIN_STS_RUN ){
+        /*** Synch Break(UART)待ち状態 ***/
+        if( u1l_lin_slv_sts == U1G_LIN_SLSTS_BREAK_UART_WAIT )
+        {
+            /* このタイミングのIRQ割り込みは無視する */
+        }
+        /*** Synch Break(IRQ)待ち状態 ***/
+        else if( u1l_lin_slv_sts == U1G_LIN_SLSTS_BREAK_IRQ_WAIT )
+        {
+            u1l_lin_slv_sts = U1G_LIN_SLSTS_SYNCHFIELD_WAIT;                    /* Synch Field待ち状態に移行 */
+            l_vog_lin_int_dis();                                                /* INT割り込みを禁止する */
+            l_vog_lin_rx_enb();                                                 /* 受信割り込み許可 */
+        }
+        /*** Synch Break(UART/IRQ)待ち状態以外 ***/
+        else
+        {
+            /* 通常発生しないが、フェール処理を実施 */
+            l_vol_lin_set_synchbreak();
+        }
+    } 
+    else{
+        /* 何もしない */
+    }
+}
+
+
+/**************************************************/
 /*  Wakeup検出待ちへの設定処理                    */
 /*------------------------------------------------*/
 /*  引数： なし                                   */
@@ -1293,8 +1310,8 @@ static void  l_vol_lin_set_wakeup(void)
 /**************************************************/
 static void  l_vol_lin_set_synchbreak(void)
 {
-    l_vog_lin_bus_tm_set();                                               /* Physical Bus Error検出タイマ起動 */
-    l_vog_lin_rx_enb(U1G_LIN_FLUSH_RX_USE, U1L_LIN_UART_HEADER_RXSIZE);   /* 受信割り込み許可 */
+    l_vog_lin_bus_tm_set();                             /* Physical Bus Error検出タイマ起動 */
+    l_vog_lin_rx_enb();   /* 受信割り込み許可 */
     l_vog_lin_int_enb();                                                  /* INT割り込みを許可 */
     u1l_lin_slv_sts = U1G_LIN_SLSTS_BREAK_UART_WAIT;                      /* Synch Break(UART)待ち状態に移行 */
 }
@@ -1334,19 +1351,6 @@ static void  l_vol_lin_set_frm_complete(l_u8  u1a_lin_err)
         (u1a_lin_err == U1G_LIN_ERR_OFF) ) {
         /* 送信成功時のみコールバック */
         f_LIN_Manager_Callback_TxComplete( xnl_lin_id_sl.u1g_lin_slot, u1l_lin_frm_sz, u1l_lin_rs_tmp );
-    }
-
-    /* ステータス管理フレーム送信完了時の自動クリア (LIN 2.0 Status Management) */
-    /* NM使用設定フレームで、送信フレームで、正常完了の場合 */
-    if( (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE) &&
-        (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND) &&
-        (u1a_lin_err == U1G_LIN_ERR_OFF) ) {
-
-        /* 全フレームのエラーフラグをクリア（LIN 2.0仕様: response_errorの自動クリア） */
-        l_u8 u1a_slot;
-        for( u1a_slot = U1G_LIN_0; u1a_slot < U1G_LIN_MAX_SLOT; u1a_slot++ ) {
-            xng_lin_frm_buf[ u1a_slot ].un_state.st_err.u2g_lin_err = U2G_LIN_BYTE_CLR;
-        }
     }
 
     /* 送受信処理完了フラグのセット */
@@ -1427,160 +1431,165 @@ l_u8  l_u1g_lin_tbl_chk(void)
 /*  戻値： 処理結果                               */
 /*         (0 / 1) : 処理成功 / 処理失敗          */
 /**************************************************/
-l_u8 l_vog_lin_check_header( l_u8 u1a_lin_data[U1L_LIN_UART_HEADER_RXSIZE] ,l_u8 u1a_lin_err )
-{
-    l_u8  u1a_lin_protid;
-    l_u8  u1a_lin_result;
-    l_vog_lin_int_dis(); /* 暫定処理：今後LINVer.2に準拠させる際に削除予定 */
-    /* UARTエラーが発生した場合 */
-    if( (u1a_lin_err & U1G_LIN_UART_ERR_ON) != U1G_LIN_BYTE_CLR )
-    {
-        xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_uart = U2G_LIN_BIT_SET;       /* UARTエラー */
-        xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;              /* Headerエラー */
-        u1a_lin_result = U1G_LIN_NG;
-        l_vol_lin_set_synchbreak();                                             /* Synch Break受信待ち設定 */
-    }
-    else
-    {
-        /* 受信データが00h以外の場合 */
-        if( u1a_lin_data[U1G_LIN_HEADER_SYNCHBREAK] != U1G_LIN_SYNCH_BREAK_DATA )
-        {
-            /* エラーフラグのリセット */
-                xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
-                u1a_lin_result = U1G_LIN_NG;
-                l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */ 
-        }
-        /* 受信データが00hならば、SynchBreak受信 */
-        else
-        {
-            /* 受信データが55h以外の場合 */
-            if( u1a_lin_data[U1G_LIN_HEADER_SYNCHFIELD] != U1G_LIN_SYNCH_FIELD_DATA )
-            {
-                xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_synch = U2G_LIN_BIT_SET;  /* Synch Fieldエラー */
-                xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
-                u1a_lin_result = U1G_LIN_NG;
-                l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */
-            }
-            /* 正常Synch Field受信 */
-            else
-            {
-                /* PARITYエラーが発生した場合 */
-                u1a_lin_protid = u1g_lin_protid_tbl[ (u1a_lin_data[U1G_LIN_HEADER_PID] & U1G_LIN_ID_PARITY_MASK) ];
-                if( u1a_lin_data[U1G_LIN_HEADER_PID] != u1a_lin_protid )
-                {
-                    xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
-                    xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_pari = U2G_LIN_BIT_SET;   /* PARITYエラー */
-                    u1a_lin_result = U1G_LIN_NG;
-                    l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */
-                }
-                /* PARITYエラーなし */
-                else
-                {
-                    /* ID,フレームモードを管理変数に格納 */
-                    xnl_lin_id_sl.u1g_lin_id = (l_u8)( u1a_lin_data[U1G_LIN_HEADER_PID] & U1G_LIN_ID_PARITY_MASK );   /* パリティを省く */
-                    xnl_lin_id_sl.u1g_lin_slot = u1g_lin_id_tbl[ xnl_lin_id_sl.u1g_lin_id ];
+// l_u8 l_vog_lin_check_header( l_u8 u1a_lin_data[U1L_LIN_UART_HEADER_RXSIZE] ,l_u8 u1a_lin_err )
+// {
+//     l_u8  u1a_lin_protid;
+//     l_u8  u1a_lin_result;
+//     l_vog_lin_int_dis(); /* 暫定処理：今後LINVer.2に準拠させる際に削除予定 */
+//     /* UARTエラーが発生した場合 */
+//     if( (u1a_lin_err & U1G_LIN_UART_ERR_ON) != U1G_LIN_BYTE_CLR )
+//     {
+//         xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_uart = U2G_LIN_BIT_SET;       /* UARTエラー */
+//         xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;              /* Headerエラー */
+//         u1a_lin_result = U1G_LIN_NG;
+//         l_vol_lin_set_synchbreak();                                             /* Synch Break受信待ち設定 */
+//     }
+//     else
+//     {
+//         /* 受信データが00h以外の場合 */
+//         if( u1a_lin_data[U1G_LIN_HEADER_SYNCHBREAK] != U1G_LIN_SYNCH_BREAK_DATA )
+//         {
+//             /* エラーフラグのリセット */
+//                 xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
+//                 u1a_lin_result = U1G_LIN_NG;
+//                 l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */ 
+//         }
+//         /* 受信データが00hならば、SynchBreak受信 */
+//         else
+//         {
+//             /* 受信データが55h以外の場合 */
+//             if( u1a_lin_data[U1G_LIN_HEADER_SYNCHFIELD] != U1G_LIN_SYNCH_FIELD_DATA )
+//             {
+//                 xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_synch = U2G_LIN_BIT_SET;  /* Synch Fieldエラー */
+//                 xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
+//                 u1a_lin_result = U1G_LIN_NG;
+//                 l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */
+//             }
+//             /* 正常Synch Field受信 */
+//             else
+//             {
+//                 /* PARITYエラーが発生した場合 */
+//                 u1a_lin_protid = u1g_lin_protid_tbl[ (u1a_lin_data[U1G_LIN_HEADER_PID] & U1G_LIN_ID_PARITY_MASK) ];
+//                 if( u1a_lin_data[U1G_LIN_HEADER_PID] != u1a_lin_protid )
+//                 {
+//                     xng_lin_bus_sts.st_bit.u2g_lin_head_err = U2G_LIN_BIT_SET;          /* Headerエラー */
+//                     xng_lin_sts_buf.un_state.st_bit.u2g_lin_e_pari = U2G_LIN_BIT_SET;   /* PARITYエラー */
+//                     u1a_lin_result = U1G_LIN_NG;
+//                     l_vol_lin_set_synchbreak();                                         /* Synch Break受信待ち設定 */
+//                 }
+//                 /* PARITYエラーなし */
+//                 else
+//                 {
+//                     /* ID,フレームモードを管理変数に格納 */
+//                     xnl_lin_id_sl.u1g_lin_id = (l_u8)( u1a_lin_data[U1G_LIN_HEADER_PID] & U1G_LIN_ID_PARITY_MASK );   /* パリティを省く */
+//                     xnl_lin_id_sl.u1g_lin_slot = u1g_lin_id_tbl[ xnl_lin_id_sl.u1g_lin_id ];
 
-                    /* SLEEPコマンドIDを受信した場合(必ずレスポンス受信動作となる) */
-                    if( xnl_lin_id_sl.u1g_lin_id == U1G_LIN_SLEEP_ID ){
-                        /* フレームが[定義] かつ LINバッファのスロットが[未使用設定]の場合 */
-                        if( (xnl_lin_id_sl.u1g_lin_slot != U1G_LIN_NO_FRAME)
-                         && (xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_no_use == U2G_LIN_BIT_SET) )
-                        {
-                            xnl_lin_id_sl.u1g_lin_slot = U1G_LIN_NO_FRAME;              /* フレーム[未定義]に変更 */
-                        }
-                        u2l_lin_herr_cnt = U2G_LIN_WORD_CLR;                            /* Physical Busエラー検出カウンタクリア */
+//                     /* SLEEPコマンドIDを受信した場合(必ずレスポンス受信動作となる) */
+//                     if( xnl_lin_id_sl.u1g_lin_id == U1G_LIN_SLEEP_ID ){
+//                         /* フレームが[定義] かつ LINバッファのスロットが[未使用設定]の場合 */
+//                         if( (xnl_lin_id_sl.u1g_lin_slot != U1G_LIN_NO_FRAME)
+//                          && (xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_no_use == U2G_LIN_BIT_SET) )
+//                         {
+//                             xnl_lin_id_sl.u1g_lin_slot = U1G_LIN_NO_FRAME;              /* フレーム[未定義]に変更 */
+//                         }
+//                         u2l_lin_herr_cnt = U2G_LIN_WORD_CLR;                            /* Physical Busエラー検出カウンタクリア */
 
-                        u1l_lin_chksum = U1G_LIN_BYTE_CLR;                              /* チェックサム演算用変数の初期化 */
-                        u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                              /* データ送信カウンタの初期化 */
-                        u1l_lin_frm_sz = U1G_LIN_DL_8;                                  /* SLEEP時のフレームサイズは8固定 */
+//                         u1l_lin_chksum = U1G_LIN_BYTE_CLR;                              /* チェックサム演算用変数の初期化 */
+//                         u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                              /* データ送信カウンタの初期化 */
+//                         u1l_lin_frm_sz = U1G_LIN_DL_8;                                  /* SLEEP時のフレームサイズは8固定 */
 
-                        u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;                   /* データ受信待ち状態 */
-                        l_vog_lin_rx_enb( U1G_LIN_FLUSH_RX_NO_USE,u1l_lin_frm_sz + U1G_LIN_1 );
-                    }
-                    /* SLEEPコマンド以外の場合 */
-                    else
-                    {
-                        /* フレームが[未定義] もしくは LINバッファのスロットが[未使用設定]の場合 */
-                        if( (xnl_lin_id_sl.u1g_lin_slot == U1G_LIN_NO_FRAME)
-                         || (xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_no_use == U2G_LIN_BIT_SET) )
-                        {
-                            l_vol_lin_set_synchbreak();                                 /* Synch Break受信待ち設定 */
-                        }
-                        /* 処理対象フレームの場合 */
-                        else
-                        {
-                            u2l_lin_herr_cnt = U2G_LIN_WORD_CLR;                        /* Physical Busエラー検出カウンタクリア */
+//                         u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;                   /* データ受信待ち状態 */
+//                         l_vog_lin_rx_enb( U1G_LIN_FLUSH_RX_NO_USE,u1l_lin_frm_sz + U1G_LIN_1 );
+//                     }
+//                     /* SLEEPコマンド以外の場合 */
+//                     else
+//                     {
+//                         /* フレームが[未定義] もしくは LINバッファのスロットが[未使用設定]の場合 */
+//                         if( (xnl_lin_id_sl.u1g_lin_slot == U1G_LIN_NO_FRAME)
+//                          || (xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_no_use == U2G_LIN_BIT_SET) )
+//                         {
+//                             l_vol_lin_set_synchbreak();                                 /* Synch Break受信待ち設定 */
+//                         }
+//                         /* 処理対象フレームの場合 */
+//                         else
+//                         {
+//                             u2l_lin_herr_cnt = U2G_LIN_WORD_CLR;                        /* Physical Busエラー検出カウンタクリア */
 
-                            /* 現在のフレームデータ長 */
-                            u1l_lin_frm_sz = xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_frm_sz;
+//                             /* 現在のフレームデータ長 */
+//                             u1l_lin_frm_sz = xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_frm_sz;
 
-                            /*-- [受信フレーム時] --*/
-                            if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_RCV )
-                            {
-                                u1l_lin_chksum = U1G_LIN_BYTE_CLR;                      /* チェックサム演算用変数の初期化 */
-                                u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                      /* データ受信カウンタの初期化 */
-                                u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;           /* データ受信待ち状態 */
-                                u1a_lin_result = U1G_LIN_OK;
-                                l_vog_lin_rx_enb( U1G_LIN_FLUSH_RX_NO_USE,u1l_lin_frm_sz + U1G_LIN_1 );
-                            }
-                            /*-- [送信フレーム時] --*/
-                            else if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND )
-                            {
-                                u2l_lin_chksum = U2G_LIN_WORD_CLR;                      /* チェックサム演算用変数の初期化 */
-                                u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                      /* データ送信カウンタの初期化 */
+//                             /*-- [受信フレーム時] --*/
+//                             if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_RCV )
+//                             {
+//                                 u1l_lin_chksum = U1G_LIN_BYTE_CLR;                      /* チェックサム演算用変数の初期化 */
+//                                 u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                      /* データ受信カウンタの初期化 */
+//                                 u1l_lin_slv_sts = U1G_LIN_SLSTS_RCVDATA_WAIT;           /* データ受信待ち状態 */
+//                                 u1a_lin_result = U1G_LIN_OK;
+//                                 l_vog_lin_rx_enb( U1G_LIN_FLUSH_RX_NO_USE,u1l_lin_frm_sz + U1G_LIN_1 );
+//                             }
+//                             /*-- [送信フレーム時] --*/
+//                             else if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND )
+//                             {
+//                                 u1l_lin_chksum = U1G_LIN_BYTE_CLR;                      /* チェックサム演算用変数の初期化 */
+//                                 u1l_lin_rs_cnt = U1G_LIN_BYTE_CLR;                      /* データ送信カウンタの初期化 */
 
-                                l_vog_lin_rx_dis();                                     /* 送信時は受信割り込み禁止 */
+//                                 l_vog_lin_rx_dis();                                     /* 送信時は受信割り込み禁止 */
 
-                                /* NM使用設定フレームの場合 */
-                                if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE )
-                                {
-                                    /* LINフレームバッファのNM部分(データ1のbit4-7)をクリア */
-                                    /* NM部分のクリア */
-                                    xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ]
-                                     &= U1G_LIN_BUF_NM_CLR_MASK;
-                                    /* LINフレームに レスポンス送信ステータスをセット */
-                                    xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ]
-                                     |= ( u1g_lin_nm_info & U1G_LIN_NM_INFO_MASK );
-                                }
+//                                 /* NM使用設定フレームの場合 */
+//                                 if( xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE )
+//                                 {
+//                                     /* LINフレームバッファのNM部分(データ1のbit4-7)をクリア */
+//                                     /* NM部分のクリア */
+//                                     xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ]
+//                                      &= U1G_LIN_BUF_NM_CLR_MASK;
+//                                     /* LINフレームに レスポンス送信ステータスをセット */
+//                                     xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ]
+//                                      |= ( u1g_lin_nm_info & U1G_LIN_NM_INFO_MASK );
+//                                 }
 
-                                /* LINバッファのデータを 送信用tmpバッファにコピー */
-                                u1l_lin_rs_tmp[ U1G_LIN_0 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_1 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_1 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_2 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_2 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_3 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_3 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_4 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_4 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_5 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_5 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_6 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_6 ];
-                                u1l_lin_rs_tmp[ U1G_LIN_7 ] =
-                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_7 ];
+//                                 /* LINバッファのデータを 送信用tmpバッファにコピー */
+//                                 u1l_lin_rs_tmp[ U1G_LIN_0 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_0 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_1 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_1 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_2 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_2 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_3 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_3 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_4 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_4 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_5 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_5 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_6 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_6 ];
+//                                 u1l_lin_rs_tmp[ U1G_LIN_7 ] =
+//                                  xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].xng_lin_data.u1g_lin_byte[ U1G_LIN_7 ];
 
-                                /* レスポンススペース待ちタイマ設定 (H850互換) */
-                                l_vog_lin_bit_tm_set( U1G_LIN_RSSP );
+//                                 /* チェックサムの送信 */
+//                                 /* 送信用tmpバッファにコピー */
+//                                 u1l_lin_rs_tmp[ u1l_lin_frm_sz ] = l_vog_lin_checksum(u1g_lin_protid_tbl[xnl_lin_id_sl.u1g_lin_id],u1l_lin_rs_tmp, u1l_lin_frm_sz, U1G_LIN_CHECKSUM_ENHANCED);
+//                                 /* LINバッファにもコピー */
+//                                 xng_lin_frm_buf[ xnl_lin_id_sl.u1g_lin_slot ].un_state.st_bit.u2g_lin_chksum
+//                                     = (l_u16)u1l_lin_rs_tmp[ u1l_lin_frm_sz ];
 
-                                /* データ送信待ち状態へ遷移 */
-                                u1l_lin_slv_sts = U1G_LIN_SLSTS_SNDDATA_WAIT;
-                                u1a_lin_result = U1G_LIN_OK;
-                            }
-                            /*-- [送信でも受信でもない] --*/
-                            else
-                            {
-                                /* 登録エラー */
-                                l_vol_lin_set_synchbreak();                             /* Synch Break受信待ち設定 */
-                                u1a_lin_result = U1G_LIN_NG;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return( u1a_lin_result );
-}
+//                                 l_vog_lin_tx_char( u1l_lin_rs_tmp, u1l_lin_frm_sz + U1G_LIN_1 );              /* データ送信 */
+
+//                                 u1l_lin_slv_sts = U1G_LIN_SLSTS_AFTER_SNDDATA_WAIT;
+//                                 u1a_lin_result = U1G_LIN_OK;
+//                             }
+//                             /*-- [送信でも受信でもない] --*/
+//                             else
+//                             {
+//                                 /* 登録エラー */
+//                                 l_vol_lin_set_synchbreak();                             /* Synch Break受信待ち設定 */
+//                                 u1a_lin_result = U1G_LIN_NG;
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     return( u1a_lin_result );
+// }
 /***** End of File *****/

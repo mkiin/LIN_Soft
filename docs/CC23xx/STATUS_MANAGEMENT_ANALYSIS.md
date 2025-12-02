@@ -193,76 +193,75 @@ else {
 
 ---
 
-## 不足している実装
+## 実装完了 ✅
 
 ### 1. response_errorシグナルの自動設定
 
-**現状**: エラーフラグは各フレームバッファに記録されるが、NM情報（bit 4）に反映されていない
+**実装箇所**: [l_slin_nmc.c:290-308](l_slin_nmc.c#L290-L308)
 
-**必要な実装**:
-
-```c
-/* l_slin_nmc.c の l_nm_tick_ch1() 内で実装すべき処理 */
-
-/* LINライブラリのNM情報書換え処理 */
-u1a_lin_tmp_nm_dat = U1G_LIN_BYTE_CLR;
-
-/* ★ 追加: レスポンスエラーの集約 */
-l_bool u1a_has_response_error = U2G_LIN_NG;
-
-/* 全フレームのエラーフラグをチェック */
-for (l_u8 slot = 0; slot < U1G_LIN_MAX_SLOT; slot++) {
-    if (xng_lin_frm_buf[slot].un_state.st_err.u2g_lin_err != 0) {
-        u1a_has_response_error = U2G_LIN_OK;
-        break;
-    }
-}
-
-/* response_errorビットのセット (bit 4) */
-if (u1a_has_response_error == U2G_LIN_OK) {
-    u1a_lin_tmp_nm_dat |= 0x10;  /* bit 4 */
-}
-
-if( u1a_lin_slp_req == U1G_LIN_SLP_REQ_ON ) {
-    u1a_lin_tmp_nm_dat |= U1L_LIN_SLPIND_SET;
-}
-if( u1l_lin_wup_ind == U1L_LIN_FLG_ON ) {
-    u1a_lin_tmp_nm_dat |= U1L_LIN_WUPIND_SET;
-}
-if( u1l_lin_data_ind == U1L_LIN_FLG_ON ) {
-    u1a_lin_tmp_nm_dat |= U1L_LIN_DATIND_SET;
-}
-
-l_vog_lin_set_nm_info(u1a_lin_tmp_nm_dat);
-```
-
-### 2. ステータス管理フレーム送信完了時の自動クリア
-
-**現状**: 正常完了時に全フレームのエラーフラグがクリアされるが、ステータス管理フレーム送信完了時の特別な処理がない
-
-**必要な実装**:
+**実装内容**:
 
 ```c
-/* l_vol_lin_set_frm_complete() 内で追加すべき処理 */
-
-static void  l_vol_lin_set_frm_complete(l_u8  u1a_lin_err)
+/* response_error シグナルの集約 (LIN 2.0 Status Management) */
+/* 全フレームのエラーフラグをチェックし、いずれかでエラーがあればresponse_errorをセット */
 {
-    /* ... (既存処理) ... */
+    l_u8 u1a_slot;
+    l_bool u1a_has_response_error = U2G_LIN_NG;
 
-    /* ★ 追加: ステータス管理フレーム送信完了時の処理 */
-    if ((xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE) &&
-        (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND) &&
-        (u1a_lin_err == U1G_LIN_ERR_OFF)) {
-
-        /* 全フレームのエラーフラグをクリア（LIN 2.0仕様） */
-        for (l_u8 slot = 0; slot < U1G_LIN_MAX_SLOT; slot++) {
-            xng_lin_frm_buf[slot].un_state.st_err.u2g_lin_err = U2G_LIN_BYTE_CLR;
+    for( u1a_slot = U1G_LIN_0; u1a_slot < U1G_LIN_MAX_SLOT; u1a_slot++ ) {
+        /* フレームバッファのエラーフラグ(4bit)をチェック */
+        if( xng_lin_frm_buf[ u1a_slot ].un_state.st_err.u2g_lin_err != U2G_LIN_BYTE_CLR ) {
+            u1a_has_response_error = U2G_LIN_OK;
+            break;
         }
     }
 
-    /* ... (既存処理) ... */
+    /* response_errorビットのセット (bit 4) */
+    if( u1a_has_response_error == U2G_LIN_OK ) {
+        u1a_lin_tmp_nm_dat |= U1L_LIN_RESPERR_SET;
+    }
 }
 ```
+
+**定数定義**: [l_slin_nmc.c:24](l_slin_nmc.c#L24)
+```c
+#define U1L_LIN_RESPERR_SET  ((l_u8)0x10)  /* RESPONSE_ERRORビットのセット用 (bit 4) LIN 2.0 */
+```
+
+**動作説明**:
+- `l_nm_tick_ch1()` 関数内でNM情報を更新する際に実行
+- 全フレーム（`U1G_LIN_MAX_SLOT`）のエラーフラグをスキャン
+- いずれか1つでもエラーが検出されていれば `response_error` (bit 4) をセット
+- エラー種別（No Response / BIT / Checksum / Too Short）は問わず、エラーの有無のみ判定
+
+### 2. ステータス管理フレーム送信完了時の自動クリア
+
+**実装箇所**: [l_slin_core_CC2340R53.c:1339-1350](l_slin_core_CC2340R53.c#L1339-L1350)
+
+**実装内容**:
+
+```c
+/* ステータス管理フレーム送信完了時の自動クリア (LIN 2.0 Status Management) */
+/* NM使用設定フレームで、送信フレームで、正常完了の場合 */
+if( (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_nm_use == U1G_LIN_NM_USE) &&
+    (xng_lin_slot_tbl[ xnl_lin_id_sl.u1g_lin_slot ].u1g_lin_sndrcv == U1G_LIN_CMD_SND) &&
+    (u1a_lin_err == U1G_LIN_ERR_OFF) ) {
+
+    /* 全フレームのエラーフラグをクリア（LIN 2.0仕様: response_errorの自動クリア） */
+    l_u8 u1a_slot;
+    for( u1a_slot = U1G_LIN_0; u1a_slot < U1G_LIN_MAX_SLOT; u1a_slot++ ) {
+        xng_lin_frm_buf[ u1a_slot ].un_state.st_err.u2g_lin_err = U2G_LIN_BYTE_CLR;
+    }
+}
+```
+
+**動作説明**:
+- `l_vol_lin_set_frm_complete()` 関数内でフレーム送信完了時に実行
+- 条件1: `u1g_lin_nm_use == U1G_LIN_NM_USE` - ステータス管理フレームである
+- 条件2: `u1g_lin_sndrcv == U1G_LIN_CMD_SND` - 送信フレームである（受信フレームではない）
+- 条件3: `u1a_lin_err == U1G_LIN_ERR_OFF` - 正常完了した
+- 3条件を満たす場合、全フレームのエラーフラグを一括クリア
+- これによりマスターノードへのエラー報告後、自動的に`response_error`がクリアされる
 
 ---
 

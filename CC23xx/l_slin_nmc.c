@@ -18,13 +18,11 @@
 #define U1L_LIN_FLG_OFF             ((l_u8)0)
 #define U1L_LIN_FLG_ON              ((l_u8)1)
 
-#define U1L_LIN_SLPIND_SET          ((l_u8)0x80)    /* SLEEP_INDビットのセット用 (bit 7) */
-#define U1L_LIN_WUPIND_SET          ((l_u8)0x40)    /* WAKEUP_INDビットのセット用 (bit 6) */
-#define U1L_LIN_DATIND_SET          ((l_u8)0x20)    /* DATA_INDビットのセット用 (bit 5) */
-#define U1L_LIN_RESPERR_SET         ((l_u8)0x10)    /* RESPONSE_ERRORビットのセット用 (bit 4) LIN 2.0 */
+#define U1L_LIN_SLPIND_SET          ((l_u8)0x80)    /* SLEEP_INDビットのセット用 */
+#define U1L_LIN_WUPIND_SET          ((l_u8)0x40)    /* WAKEUP_INDビットのセット用 */
+#define U1L_LIN_DATIND_SET          ((l_u8)0x20)    /* DATA_INDビットのセット用 */
 
 /* スレーブタスク用変数 */
-static l_u16 u2a_lin_stat;
 static l_u8  u1l_lin_mod_slvstat;                   /* NMスレーブステータス */
 static l_u16 u2l_lin_tmr_slvst;                     /* Tslv_stカウンタ */
 static l_u16 u2l_lin_tmr_wurty;                     /* Twurtyカウンタ */
@@ -58,6 +56,7 @@ void l_nm_clr_mst_err_ch1(void);
 /****************************************************************************/
 void l_nm_tick_ch1(l_u8 u1a_lin_slp_req)
 {
+    l_u16 u2a_lin_stat;
     l_u8  u1a_lin_tmp_nm_dat;
 
     /* LINステータスのリード */
@@ -286,27 +285,6 @@ void l_nm_tick_ch1(l_u8 u1a_lin_slp_req)
 
     /* LINライブラリのNM情報書換え処理 */
     u1a_lin_tmp_nm_dat = U1G_LIN_BYTE_CLR;
-
-    /* response_error シグナルの集約 (LIN 2.0 Status Management) */
-    /* 全フレームのエラーフラグをチェックし、いずれかでエラーがあればresponse_errorをセット */
-    {
-        l_u8 u1a_slot;
-        l_bool u1a_has_response_error = U2G_LIN_NG;
-
-        for( u1a_slot = U1G_LIN_0; u1a_slot < U1G_LIN_MAX_SLOT; u1a_slot++ ) {
-            /* フレームバッファのエラーフラグ(4bit)をチェック */
-            if( xng_lin_frm_buf[ u1a_slot ].un_state.st_err.u2g_lin_err != U2G_LIN_BYTE_CLR ) {
-                u1a_has_response_error = U2G_LIN_OK;
-                break;
-            }
-        }
-
-        /* response_errorビットのセット (bit 4) */
-        if( u1a_has_response_error == U2G_LIN_OK ) {
-            u1a_lin_tmp_nm_dat |= U1L_LIN_RESPERR_SET;
-        }
-    }
-
     if( u1a_lin_slp_req == U1G_LIN_SLP_REQ_ON ) {
         /* Sleep.indビットのセット */
         u1a_lin_tmp_nm_dat |= U1L_LIN_SLPIND_SET;
